@@ -4,7 +4,7 @@ default_options : ['warning_level=3', 'c_std=c11'])
 
 src = subproject('evol').get_variable('evolmod_subdir') + '/meson.build'
 dst = meson.current_source_dir() + '/import/'
-run_command( 'python', meson.source_root() + '/subprojects/evol/buildscripts/copy.py', src, dst)
+run_command( 'python3', meson.source_root() + '/subprojects/evol/buildscripts/copy.py', src, dst)
 subdir('import')
 
 mod_src = [
