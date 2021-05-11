@@ -1,4 +1,4 @@
-project('template', 'c',
+project('evol-mod-game', 'c',
 version : '0.1',
 default_options : ['warning_level=3', 'c_std=c11'])
 
@@ -8,7 +8,7 @@ run_command( 'python3', meson.source_root() + '/subprojects/evol/buildscripts/co
 subdir('import')
 
 mod_src = [
-  'src/template.c',
+  'src/mod.c',
 ]
 
 mod_incdir = [
@@ -20,7 +20,7 @@ mod_deps = [
 ]
 
 module = shared_module(
-  'template', mod_src,
+  'evmodgame', mod_src,
   include_directories: mod_incdir,
   dependencies: mod_deps,
 )
@@ -29,4 +29,6 @@ mod_dep = declare_dependency(
   include_directories: mod_incdir,
 )
 
-meson.override_dependency('evmod_template', mod_dep)
+meson.override_dependency('evmod_game', mod_dep)
+
+configure_file(input: 'src/lua/script_api.lua', output: 'script_api.lua', copy:true)
