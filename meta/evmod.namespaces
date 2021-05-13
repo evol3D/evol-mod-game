@@ -1,0 +1,20 @@
+EV_NS_DEF_BEGIN(Game)
+
+EV_NS_DEF_FN(void, initECS, (,))
+
+EV_NS_DEF_END(Game)
+
+EV_NS_DEF_BEGIN(Object)
+
+EV_NS_DEF_FN(Matrix4x4 *, getWorldTransform, (ObjectID, obj_id))
+EV_NS_DEF_FN(void, setWorldTransform, (ObjectID, obj_id), (Matrix4x4, new_transform))
+
+EV_NS_DEF_FN(void, setPosition, (ObjectID, obj), (Vec3, new_pos))
+EV_NS_DEF_FN(void, setRotation, (ObjectID, obj), (Vec4, new_rot))
+EV_NS_DEF_FN(void, setScale,    (ObjectID, obj), (Vec3, new_scale))
+
+EV_NS_DEF_FN(Vec3, getPosition, (ObjectID, obj))
+EV_NS_DEF_FN(Vec4, getRotation, (ObjectID, obj))
+EV_NS_DEF_FN(Vec3, getScale,    (ObjectID, obj))
+
+EV_NS_DEF_END(Object)
