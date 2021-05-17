@@ -2,6 +2,7 @@
 #include <evol/evolmod.h>
 
 #include "components/Transform.h"
+#include "components/Camera.h"
 
 #define TYPE_MODULE evmod_ecs
 #define NAMESPACE_MODULE evmod_ecs
@@ -141,6 +142,110 @@ _ev_object_getworldtransform(
   return ECS->getComponent(entt, WorldTransformComponentID);
 }
 
+ObjectID
+_ev_camera_getactive()
+{
+  return ((MainCamera*)ECS->getSingleton(MainCameraID))->entt;
+}
+
+void
+_ev_camera_setactive(
+    ObjectID camera)
+{
+  ECS->setSingleton(MainCameraID, sizeof(MainCamera), &(MainCamera) {camera});
+}
+
+ObjectID
+_ev_camera_create()
+{
+  ECSEntityID cameraID = ECS->createEntity();
+  ECS->addComponent(cameraID, CameraComponentID);
+  
+  if(_ev_camera_getactive() == 0) {
+    _ev_camera_setactive(cameraID);
+  }
+
+  return (ObjectID)cameraID;
+}
+
+void
+_ev_camera_sethfov(
+  ObjectID camera,
+  U32 hfov)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  if(comp->hfov != hfov) {
+    comp->hfov = hfov;
+    ECS->modified(camera,CameraComponentID);
+  }
+}
+
+void
+_ev_camera_setvfov(
+  ObjectID camera,
+  U32 vfov)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  if(comp->vfov != vfov) {
+    comp->vfov = vfov;
+    ECS->modified(camera,CameraComponentID);
+  }
+}
+
+void
+_ev_camera_setaspectratio(
+  ObjectID camera,
+  F32 aspectRatio)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  if(comp->aspectRatio != aspectRatio) {
+    comp->aspectRatio = aspectRatio;
+    ECS->modified(camera,CameraComponentID);
+  }
+}
+
+void
+_ev_camera_setnearplane(
+  ObjectID camera,
+  F32 nearPlane)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  if(comp->nearPlane != nearPlane) {
+    comp->nearPlane = nearPlane;
+    ECS->modified(camera,CameraComponentID);
+  }
+}
+
+void
+_ev_camera_setfarplane(
+  ObjectID camera,
+  F32 farPlane)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  if(comp->farPlane != farPlane) {
+    comp->farPlane = farPlane;
+    ECS->modified(camera,CameraComponentID);
+  }
+}
+
+void
+_ev_camera_getviewmat(
+  ObjectID camera,
+  Matrix4x4 outViewMat)
+{
+  Matrix4x4 *transform = _ev_object_getworldtransform(camera);
+  glm_mat4_inv(*transform, outViewMat);
+}
+
+void
+_ev_camera_getprojectionmat(
+  ObjectID camera,
+  Matrix4x4 outProjMat)
+{
+  CameraComponent *comp = ECS->getComponent(camera, CameraComponentID);
+  glm_mat4_dup(comp->projectionMatrix, outProjMat);
+}
+
 void
 _ev_object_setworldtransform(
     ObjectID obj_id,
@@ -153,6 +258,28 @@ _ev_object_setworldtransform(
   ECS->forEachChild(entt, transform_setdirty);
 }
 
+void 
+CameraComponentOnAddTrigger(ECSQuery query)
+{
+  CameraComponent *cameraComp = ECS->getQueryColumn(query, sizeof(CameraComponent), 1);
+  glm_mat4_identity(cameraComp->projectionMatrix);
+}
+
+void
+CameraComponentOnSetTrigger(ECSQuery query)
+{
+  CameraComponent *cameraComp = ECS->getQueryColumn(query, sizeof(CameraComponent), 1);
+  U32 count = ECS->getQueryMatchCount(query);
+
+  for(int i = 0; i < count; i++) {
+    if(cameraComp[i].viewType == EV_CAMERA_PERSPECTIVE_VIEW) {
+      glm_perspective(glm_rad(cameraComp[i].hfov), cameraComp[i].aspectRatio, cameraComp[i].nearPlane, cameraComp[i].farPlane, cameraComp[i].projectionMatrix);
+    } else {
+      assert(!"Unimplemented: Orthographic Camera");
+    }
+  }
+}
+
 void
 _ev_game_initecs()
 {
@@ -160,6 +287,12 @@ _ev_game_initecs()
     TransformComponentID = ECS->registerComponent(TransformComponentName, sizeof(TransformComponent), EV_ALIGNOF(TransformComponent));
     WorldTransformComponentID = ECS->registerComponent(WorldTransformComponentName, sizeof(WorldTransformComponent), EV_ALIGNOF(WorldTransformComponent));
     DirtyTransformTagID = ECS->registerTag(DirtyTransformTagName);
+
+    CameraComponentID = ECS->registerComponent(CameraComponentName, sizeof(CameraComponent), EV_ALIGNOF(CameraComponent));
+    MainCameraID = ECS->registerComponent(MainCameraName, sizeof(MainCamera), EV_ALIGNOF(MainCamera));
+
+    ECS->setOnAddTrigger("CameraComponentOnAddTrigger", CameraComponentName, CameraComponentOnAddTrigger);
+    ECS->setOnSetTrigger("CameraComponentOnSetTrigger", CameraComponentName, CameraComponentOnSetTrigger);
   }
 }
 
@@ -189,14 +322,23 @@ EV_BINDINGS
 
   EV_NS_BIND_FN(Object, getWorldTransform, _ev_object_getworldtransform);
   EV_NS_BIND_FN(Object, setWorldTransform, _ev_object_setworldtransform);
-
   EV_NS_BIND_FN(Object, setPosition, _ev_object_setposition);
   EV_NS_BIND_FN(Object, setRotation, _ev_object_setrotation);
   EV_NS_BIND_FN(Object, setScale,    _ev_object_setscale);
-
   EV_NS_BIND_FN(Object, getPosition, _ev_object_getposition);
   EV_NS_BIND_FN(Object, getRotation, _ev_object_getrotation);
   EV_NS_BIND_FN(Object, getScale,    _ev_object_getscale);
+
+  EV_NS_BIND_FN(Camera, create, _ev_camera_create);
+  EV_NS_BIND_FN(Camera, getActive, _ev_camera_getactive);
+  EV_NS_BIND_FN(Camera, setActive, _ev_camera_setactive);
+  EV_NS_BIND_FN(Camera, setAspectRatio, _ev_camera_setaspectratio);
+  EV_NS_BIND_FN(Camera, setHFOV, _ev_camera_sethfov);
+  EV_NS_BIND_FN(Camera, setVFOV, _ev_camera_setvfov);
+  EV_NS_BIND_FN(Camera, setNearPlane, _ev_camera_setnearplane);
+  EV_NS_BIND_FN(Camera, setFarPlane, _ev_camera_setfarplane);
+  EV_NS_BIND_FN(Camera, getViewMat, _ev_camera_getviewmat);
+  EV_NS_BIND_FN(Camera, getProjectionMat, _ev_camera_getprojectionmat);
 }
 
 void

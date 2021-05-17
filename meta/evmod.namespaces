@@ -4,6 +4,7 @@ EV_NS_DEF_FN(void, initECS, (,))
 
 EV_NS_DEF_END(Game)
 
+
 EV_NS_DEF_BEGIN(Object)
 
 EV_NS_DEF_FN(Matrix4x4 *, getWorldTransform, (ObjectID, obj_id))
@@ -18,3 +19,22 @@ EV_NS_DEF_FN(Vec4, getRotation, (ObjectID, obj))
 EV_NS_DEF_FN(Vec3, getScale,    (ObjectID, obj))
 
 EV_NS_DEF_END(Object)
+
+
+EV_NS_DEF_BEGIN(Camera)
+
+EV_NS_DEF_FN(ObjectID, create, (,))
+
+EV_NS_DEF_FN(ObjectID, getActive, (,))
+EV_NS_DEF_FN(void, setActive, (ObjectID, camera))
+
+EV_NS_DEF_FN(void, setHFOV, (ObjectID, camera), (U32, hfov))
+EV_NS_DEF_FN(void, setVFOV, (ObjectID, camera), (U32, vfov))
+EV_NS_DEF_FN(void, setAspectRatio, (ObjectID, camera), (F32, aspectRatio))
+EV_NS_DEF_FN(void, setNearPlane, (ObjectID, camera), (F32, nearPlane))
+EV_NS_DEF_FN(void, setFarPlane, (ObjectID, camera), (F32, farPlane))
+
+EV_NS_DEF_FN(void, getProjectionMat, (ObjectID, camera), (Matrix4x4, outProjMat))
+EV_NS_DEF_FN(void, getViewMat, (ObjectID, camera), (Matrix4x4, outViewMat))
+
+EV_NS_DEF_END(Camera)
