@@ -19,6 +19,10 @@ typedef struct {
   Vec3 scale;
 } TransformComponent;
 
+Matrix4x4 *
+_ev_object_getworldtransform(
+    ObjectID entt);
+
 void
 init_scripting_api();
 
@@ -56,6 +60,30 @@ _ev_object_setposition(
   transform_setdirty(entt);
 }
 
+Vec3
+_ev_object_getrotationeuler(
+    ECSEntityID entt)
+{
+  Matrix4x4 *rotationMatrix = _ev_object_getworldtransform(entt);
+  Vec3 res;
+  glm_euler_angles(*rotationMatrix, &res);
+  return res;
+}
+
+void
+_ev_object_setrotationeuler(
+    ECSEntityID entt,
+    Vec3 new_angles)
+{
+  TransformComponent *tr = ECS->getComponent(entt, GameData.transformComponentID);
+
+  Matrix4x4 rotationMatrix;
+  glm_euler(&new_angles, rotationMatrix);
+  glm_mat4_quat(rotationMatrix, &(tr->rotation));
+
+  transform_setdirty(entt);
+}
+
 void
 _ev_object_setscale(
     ECSEntityID entt,
@@ -87,10 +115,6 @@ _ev_object_getscale(
   TransformComponent *comp = ECS->getComponent(entt, GameData.transformComponentID);
   return comp->scale;
 }
-
-Matrix4x4 *
-_ev_object_getworldtransform(
-    ObjectID entt);
 
 void
 worldtransform_update(
@@ -201,8 +225,25 @@ _ev_object_setposition_wrapper(
     ECSEntityID *entt,
     Vec3 *new_pos)
 {
-  Vec3 pos = *new_pos;
+  Vec3 pos = *new_pos; // Alignment
   _ev_object_setposition(*entt, pos);
+}
+
+void
+_ev_object_setrotationeuler_wrapper(
+    ECSEntityID *entt,
+    Vec3 *new_rot)
+{
+  Vec3 angles = Vec3new(new_rot->x, new_rot->y, new_rot->z); // Alignment
+  _ev_object_setrotationeuler(*entt, angles);
+}
+
+void
+_ev_object_getrotationeuler_wrapper(
+    Vec3 *out,
+    ECSEntityID *entt)
+{
+  *out = _ev_object_getrotationeuler(*entt);
 }
 
 #define TYPE_MODULE evmod_script
@@ -230,8 +271,8 @@ init_scripting_api()
   ScriptInterface->addFunction(_ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(_ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
 
-  /* ScriptInterface->addFunction(_ev_object_geteulerangles_wrapper, "ev_object_geteulerangles", vec3SType, 1, (ScriptType[]){ullSType}); */
-  /* ScriptInterface->addFunction(_ev_object_seteulerangles_wrapper, "ev_object_seteulerangles", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
+  ScriptInterface->addFunction(_ev_object_getrotationeuler_wrapper, "ev_object_getrotationeuler", vec3SType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(_ev_object_setrotationeuler_wrapper, "ev_object_setrotationeuler", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
 
   /* ScriptInterface->addFunction(_ev_object_getscale_wrapper, "ev_object_getscale", vec3SType, 1, (ScriptType[]){ullSType}); */
   /* ScriptInterface->addFunction(_ev_object_setscale_wrapper, "ev_object_setscale", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
