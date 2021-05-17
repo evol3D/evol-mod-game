@@ -1,6 +1,8 @@
 #define EV_MODULE_DEFINE
 #include <evol/evolmod.h>
 
+#include "components/Transform.h"
+
 #define TYPE_MODULE evmod_ecs
 #define NAMESPACE_MODULE evmod_ecs
 #include <evol/meta/type_import.h>
@@ -8,16 +10,7 @@
 
 struct evGameData {
   evolmodule_t ecs_module;
-  ECSComponentID transformComponentID;
-  ECSComponentID worldTransformComponentID;
-  ECSTagID dirtyTransformTagID;
 } GameData;
-
-typedef struct {
-  Vec3 position;
-  Vec4 rotation;
-  Vec3 scale;
-} TransformComponent;
 
 Matrix4x4 *
 _ev_object_getworldtransform(
@@ -30,13 +23,11 @@ void
 transform_setdirty(
     ECSEntityID entt)
 {
-  if(ECS->hasTag(entt, GameData.dirtyTransformTagID)) {
+  if(ECS->hasTag(entt, DirtyTransformTagID)) {
     return;
   }
 
-  /* printf("Set Entity #%llu as dirty\n", entt); */
-
-  ECS->addTag(entt, GameData.dirtyTransformTagID);
+  ECS->addTag(entt, DirtyTransformTagID);
   ECS->forEachChild(entt, transform_setdirty);
 }
 
@@ -45,7 +36,7 @@ _ev_object_setrotation(
     ECSEntityID entt, 
     Vec4 new_rot)
 {
-  TransformComponent *tr = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *tr = ECS->getComponent(entt, TransformComponentID);
   tr->rotation = new_rot;
   transform_setdirty(entt);
 }
@@ -55,7 +46,7 @@ _ev_object_setposition(
     ECSEntityID entt, 
     Vec3 new_pos)
 {
-  TransformComponent *tr = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *tr = ECS->getComponent(entt, TransformComponentID);
   tr->position = new_pos;
   transform_setdirty(entt);
 }
@@ -75,7 +66,7 @@ _ev_object_setrotationeuler(
     ECSEntityID entt,
     Vec3 new_angles)
 {
-  TransformComponent *tr = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *tr = ECS->getComponent(entt, TransformComponentID);
 
   Matrix4x4 rotationMatrix;
   glm_euler(&new_angles, rotationMatrix);
@@ -89,7 +80,7 @@ _ev_object_setscale(
     ECSEntityID entt,
     Vec3 new_scale)
 {
-  TransformComponent *tr = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *tr = ECS->getComponent(entt, TransformComponentID);
   tr->scale = new_scale;
   transform_setdirty(entt);
 }
@@ -98,21 +89,21 @@ Vec4
 _ev_object_getrotation(
     ECSEntityID entt)
 {
-  TransformComponent *comp = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *comp = ECS->getComponent(entt, TransformComponentID);
   return comp->rotation;
 }
 Vec3
 _ev_object_getposition(
     ECSEntityID entt)
 {
-  TransformComponent *comp = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *comp = ECS->getComponent(entt, TransformComponentID);
   return comp->position;
 }
 Vec3
 _ev_object_getscale(
     ECSEntityID entt)
 {
-  TransformComponent *comp = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *comp = ECS->getComponent(entt, TransformComponentID);
   return comp->scale;
 }
 
@@ -120,11 +111,11 @@ void
 worldtransform_update(
     ECSEntityID entt)
 {
-  if(!ECS->hasTag(entt, GameData.dirtyTransformTagID)) {
+  if(!ECS->hasTag(entt, DirtyTransformTagID)) {
     return;
   }
 
-  Matrix4x4 *worldTransform = ECS->getComponent(entt, GameData.worldTransformComponentID);
+  WorldTransformComponent *worldTransform = ECS->getComponent(entt, WorldTransformComponentID);
 
   ECSEntityID parent = ECS->getParent(entt);
   if(parent != 0) {
@@ -134,15 +125,12 @@ worldtransform_update(
     glm_mat4_identity(*worldTransform);
   }
 
-  /* printf("Matrix4x4 for Entity %llu 's parent = \n", entt); */
-  /* glm_mat4_print(*worldTransform, stdout); */
-
-  TransformComponent *transform = ECS->getComponent(entt, GameData.transformComponentID);
+  TransformComponent *transform = ECS->getComponent(entt, TransformComponentID);
   glm_translate(*worldTransform, (float*)&transform->position);
   glm_quat_rotate(*worldTransform, (float*)&transform->rotation, *worldTransform);
   glm_scale(*worldTransform, (float*)&transform->scale);
 
-  ECS->removeTag(entt, GameData.dirtyTransformTagID);
+  ECS->removeTag(entt, DirtyTransformTagID);
 }
 
 Matrix4x4 *
@@ -150,7 +138,7 @@ _ev_object_getworldtransform(
     ObjectID entt)
 {
   worldtransform_update(entt);
-  return ECS->getComponent(entt, GameData.worldTransformComponentID);
+  return ECS->getComponent(entt, WorldTransformComponentID);
 }
 
 void
@@ -159,7 +147,7 @@ _ev_object_setworldtransform(
     Matrix4x4 new_transform)
 {
   ECSEntityID entt = (ECSEntityID)obj_id;
-  Matrix4x4 *world_transform = ECS->getComponent(entt, GameData.worldTransformComponentID);
+  WorldTransformComponent *world_transform = ECS->getComponent(entt, WorldTransformComponentID);
   glm_mat4_copy(new_transform, *world_transform);
 
   ECS->forEachChild(entt, transform_setdirty);
@@ -168,23 +156,22 @@ _ev_object_setworldtransform(
 void
 _ev_game_initecs()
 {
-  GameData.ecs_module = evol_loadmodule("ecs");
-  if(GameData.ecs_module == NULL) {
-    return;
+  if(ECS) {
+    TransformComponentID = ECS->registerComponent(TransformComponentName, sizeof(TransformComponent), EV_ALIGNOF(TransformComponent));
+    WorldTransformComponentID = ECS->registerComponent(WorldTransformComponentName, sizeof(WorldTransformComponent), EV_ALIGNOF(WorldTransformComponent));
+    DirtyTransformTagID = ECS->registerTag(DirtyTransformTagName);
   }
-
-  IMPORT_NAMESPACE(ECS, GameData.ecs_module);
-
-  GameData.transformComponentID = ECS->registerComponent("TransformComponent", sizeof(TransformComponent), EV_ALIGNOF(TransformComponent));
-  GameData.worldTransformComponentID = ECS->registerComponent("WorldTransformComponent", sizeof(Matrix4x4), EV_ALIGNOF(Matrix4x4));
-  GameData.dirtyTransformTagID = ECS->registerTag("DirtyTransform");
 }
 
 EV_CONSTRUCTOR 
 {
   static_assert(sizeof(ObjectID) == sizeof(ECSEntityID));
 
-  GameData.ecs_module = NULL;
+  GameData.ecs_module = evol_loadmodule("ecs");
+
+  if(GameData.ecs_module) {
+    IMPORT_NAMESPACE(ECS, GameData.ecs_module);
+  }
 
   init_scripting_api();
 }
