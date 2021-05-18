@@ -298,7 +298,7 @@ _ev_game_initecs()
 
 EV_CONSTRUCTOR 
 {
-  static_assert(sizeof(ObjectID) == sizeof(ECSEntityID));
+  static_assert(sizeof(ObjectID) == sizeof(ECSEntityID), "ObjectID not the same size as ECSEntityID");
 
   GameData.ecs_module = evol_loadmodule("ecs");
 
