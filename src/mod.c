@@ -348,7 +348,7 @@ EV_BINDINGS
 
 void
 _ev_object_getposition_wrapper(
-    Vec3 *out,
+    __unaligned Vec3 *out,
     ECSEntityID *entt)
 {
   *out = _ev_object_getposition(*entt);
@@ -357,24 +357,22 @@ _ev_object_getposition_wrapper(
 void
 _ev_object_setposition_wrapper(
     ECSEntityID *entt,
-    Vec3 *new_pos)
+    __unaligned Vec3 *new_pos)
 {
-  Vec3 pos = *new_pos; // Alignment
-  _ev_object_setposition(*entt, pos);
+  _ev_object_setposition(*entt, *new_pos);
 }
 
 void
 _ev_object_setrotationeuler_wrapper(
     ECSEntityID *entt,
-    Vec3 *new_rot)
+    __unaligned Vec3 *new_rot)
 {
-  Vec3 angles = Vec3new(new_rot->x, new_rot->y, new_rot->z); // Alignment
-  _ev_object_setrotationeuler(*entt, angles);
+  _ev_object_setrotationeuler(*entt, *new_rot);
 }
 
 void
 _ev_object_getrotationeuler_wrapper(
-    Vec3 *out,
+    __unaligned Vec3 *out,
     ECSEntityID *entt)
 {
   *out = _ev_object_getrotationeuler(*entt);
