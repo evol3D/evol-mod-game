@@ -272,10 +272,13 @@ CameraComponentOnSetTrigger(ECSQuery query)
   U32 count = ECS->getQueryMatchCount(query);
 
   for(int i = 0; i < count; i++) {
-    if(cameraComp[i].viewType == EV_CAMERA_PERSPECTIVE_VIEW) {
+    if(cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_PERSPECTIVE) {
       glm_perspective(glm_rad(cameraComp[i].hfov), cameraComp[i].aspectRatio, cameraComp[i].nearPlane, cameraComp[i].farPlane, cameraComp[i].projectionMatrix);
-    } else {
+    } else if (cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_ORTHOGRAPHIC){
       assert(!"Unimplemented: Orthographic Camera");
+    } else {
+      ev_log_error("Invalid camera view type. Choose one from: (EV_CAMERA_VIEWTYPE_PERSPECTIVE, EV_CAMERA_VIEWTYPE_ORTHOGRAPHIC)");
+      assert(false);
     }
   }
 }

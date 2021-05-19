@@ -2,11 +2,6 @@
 
 #include <evol/common/ev_types.h>
 
-typedef enum {
-  EV_CAMERA_PERSPECTIVE_VIEW,
-  EV_CAMERA_ORTHOGRAPHIC_VIEW,
-} CameraViewType;
-
 // =====================
 // Component Definitions
 // =====================
