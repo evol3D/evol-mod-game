@@ -6,7 +6,7 @@ end
 EntityMemberSetters['position'] = function(entt, pos)
   C('ev_object_setposition', entt, pos)
   local rb = ComponentGetters[Rigidbody](entt)
-  if rb.handle ~= nil then
+  if rb ~= nil then
     rb:setPosition(pos)
   end
 end
