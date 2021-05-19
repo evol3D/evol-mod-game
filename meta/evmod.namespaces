@@ -23,7 +23,7 @@ EV_NS_DEF_END(Object)
 
 EV_NS_DEF_BEGIN(Camera)
 
-EV_NS_DEF_FN(ObjectID, create, (,))
+EV_NS_DEF_FN(ObjectID, create, (CameraViewType, viewType))
 
 EV_NS_DEF_FN(ObjectID, getActive, (,))
 EV_NS_DEF_FN(void, setActive, (ObjectID, camera))

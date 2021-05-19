@@ -156,11 +156,13 @@ _ev_camera_setactive(
 }
 
 ObjectID
-_ev_camera_create()
+_ev_camera_create(CameraViewType type)
 {
   ECSEntityID cameraID = ECS->createEntity();
-  ECS->addComponent(cameraID, CameraComponentID);
-  
+  ECS->setComponent(cameraID, CameraComponentID, sizeof(CameraComponent), &(CameraComponent) {
+      .viewType = type,
+  });
+
   if(_ev_camera_getactive() == 0) {
     _ev_camera_setactive(cameraID);
   }
