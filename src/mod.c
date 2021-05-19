@@ -296,6 +296,8 @@ _ev_game_initecs()
     CameraComponentID = ECS->registerComponent(CameraComponentName, sizeof(CameraComponent), EV_ALIGNOF(CameraComponent));
     MainCameraID = ECS->registerComponent(MainCameraName, sizeof(MainCamera), EV_ALIGNOF(MainCamera));
 
+    _ev_camera_setactive(0);
+
     ECS->setOnAddTrigger("CameraComponentOnAddTrigger", CameraComponentName, CameraComponentOnAddTrigger);
     ECS->setOnSetTrigger("CameraComponentOnSetTrigger", CameraComponentName, CameraComponentOnSetTrigger);
   }
