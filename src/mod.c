@@ -350,34 +350,46 @@ EV_BINDINGS
 
 void
 _ev_object_getposition_wrapper(
-    __unaligned Vec3 *out,
-    ECSEntityID *entt)
+    EV_UNALIGNED Vec3 *out,
+    EV_UNALIGNED ECSEntityID *entt)
 {
-  *out = _ev_object_getposition(*entt);
+  Vec3 res = _ev_object_getposition(*entt);
+  out->x = res.x;
+  out->y = res.y;
+  out->z = res.z;
 }
 
 void
 _ev_object_setposition_wrapper(
-    ECSEntityID *entt,
-    __unaligned Vec3 *new_pos)
+    EV_UNALIGNED ECSEntityID *entt,
+    EV_UNALIGNED Vec3 *new_pos)
 {
-  _ev_object_setposition(*entt, *new_pos);
+  _ev_object_setposition(*entt, Vec3new(
+        new_pos->x, 
+        new_pos->y, 
+        new_pos->z));
 }
 
 void
 _ev_object_setrotationeuler_wrapper(
-    ECSEntityID *entt,
-    __unaligned Vec3 *new_rot)
+    EV_UNALIGNED ECSEntityID *entt,
+    EV_UNALIGNED Vec3 *new_rot)
 {
-  _ev_object_setrotationeuler(*entt, *new_rot);
+  _ev_object_setrotationeuler(*entt, Vec3new(
+        new_rot->x,
+        new_rot->y,
+        new_rot->z));
 }
 
 void
 _ev_object_getrotationeuler_wrapper(
-    __unaligned Vec3 *out,
-    ECSEntityID *entt)
+    EV_UNALIGNED Vec3 *out,
+    EV_UNALIGNED ECSEntityID *entt)
 {
-  *out = _ev_object_getrotationeuler(*entt);
+  Vec3 res = _ev_object_getrotationeuler(*entt);
+  out->x = res.x;
+  out->y = res.y;
+  out->z = res.z;
 }
 
 #define TYPE_MODULE evmod_script
