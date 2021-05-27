@@ -1,4 +1,6 @@
-TYPE(ObjectID, U64)
+TYPE(GameObject, GenericHandle)
+
+TYPE(GameScene, GenericHandle)
 
 TYPE(CameraViewType, enum {
   EV_CAMERA_VIEWTYPE_PERSPECTIVE,

@@ -1,40 +1,57 @@
 EV_NS_DEF_BEGIN(Game)
 
-EV_NS_DEF_FN(void, initECS, (,))
+EV_NS_DEF_FN(GameScene, newScene, (,))
+EV_NS_DEF_FN(void, setActiveScene, (GameScene, scene_handle))
+EV_NS_DEF_FN(U32, progress, (F32, deltaTime))
 
 EV_NS_DEF_END(Game)
 
 
+EV_NS_DEF_BEGIN(Scene)
+
+EV_NS_DEF_FN(GameObject, createObject, (GameScene, scene_handle))
+EV_NS_DEF_FN(GameObject, createChildObject, (GameScene, scene_handle), (GameObject, parent))
+EV_NS_DEF_FN(void, addChildToObject, (GameScene, scene_handle), (GameObject, parent), (GameObject, child))
+EV_NS_DEF_FN(void, destroyObject, (GameScene, scene_handle), (GameObject, obj))
+EV_NS_DEF_FN(GameObject, createCamera, (GameScene, scene_handle), (CameraViewType, viewType))
+EV_NS_DEF_FN(GenericHandle, getECSWorld, (GameScene, scene_handle))
+EV_NS_DEF_FN(GenericHandle, getPhysicsWorld, (GameScene, scene_handle))
+
+EV_NS_DEF_FN(GameObject, getActiveCamera, (GameScene, scene_handle))
+EV_NS_DEF_FN(void, setActiveCamera, (GameScene, scene_handle), (GameObject, camera))
+
+
+EV_NS_DEF_END(Scene)
+
+
 EV_NS_DEF_BEGIN(Object)
 
-EV_NS_DEF_FN(Matrix4x4 *, getWorldTransform, (ObjectID, obj_id))
-EV_NS_DEF_FN(void, setWorldTransform, (ObjectID, obj_id), (Matrix4x4, new_transform))
+EV_NS_DEF_FN(Matrix4x4 *, getWorldTransform, (GameScene, scene_handle), (GameObject, obj_id))
+EV_NS_DEF_FN(void, setWorldTransform, (GameScene, scene_handle), (GameObject, obj_id), (Matrix4x4, new_transform))
 
-EV_NS_DEF_FN(void, setPosition, (ObjectID, obj), (Vec3, new_pos))
-EV_NS_DEF_FN(void, setRotation, (ObjectID, obj), (Vec4, new_rot))
-EV_NS_DEF_FN(void, setScale,    (ObjectID, obj), (Vec3, new_scale))
+EV_NS_DEF_FN(void, setPosition, (GameScene, scene_handle), (GameObject, obj), (Vec3, new_pos))
+EV_NS_DEF_FN(void, setRotation, (GameScene, scene_handle), (GameObject, obj), (Vec4, new_rot))
+EV_NS_DEF_FN(void, setScale,    (GameScene, scene_handle), (GameObject, obj), (Vec3, new_scale))
 
-EV_NS_DEF_FN(Vec3, getPosition, (ObjectID, obj))
-EV_NS_DEF_FN(Vec4, getRotation, (ObjectID, obj))
-EV_NS_DEF_FN(Vec3, getScale,    (ObjectID, obj))
+EV_NS_DEF_FN(Vec3, getPosition, (GameScene, scene_handle), (GameObject, obj))
+EV_NS_DEF_FN(Vec4, getRotation, (GameScene, scene_handle), (GameObject, obj))
+EV_NS_DEF_FN(Vec3, getScale,    (GameScene, scene_handle), (GameObject, obj))
+
+EV_NS_DEF_FN(PTR, getComponent, (GameScene, scene_handle), (GameObject, obj), (GenericHandle, comp_id))
+EV_NS_DEF_FN(bool, hasComponent, (GameScene, scene_handle), (GameObject, obj), (GenericHandle, comp_id))
 
 EV_NS_DEF_END(Object)
 
 
 EV_NS_DEF_BEGIN(Camera)
 
-EV_NS_DEF_FN(ObjectID, create, (CameraViewType, viewType))
+EV_NS_DEF_FN(void, setHFOV, (GameScene, scene_handle), (GameObject, camera), (U32, hfov))
+EV_NS_DEF_FN(void, setVFOV, (GameScene, scene_handle), (GameObject, camera), (U32, vfov))
+EV_NS_DEF_FN(void, setAspectRatio, (GameScene, scene_handle), (GameObject, camera), (F32, aspectRatio))
+EV_NS_DEF_FN(void, setNearPlane, (GameScene, scene_handle), (GameObject, camera), (F32, nearPlane))
+EV_NS_DEF_FN(void, setFarPlane, (GameScene, scene_handle), (GameObject, camera), (F32, farPlane))
 
-EV_NS_DEF_FN(ObjectID, getActive, (,))
-EV_NS_DEF_FN(void, setActive, (ObjectID, camera))
-
-EV_NS_DEF_FN(void, setHFOV, (ObjectID, camera), (U32, hfov))
-EV_NS_DEF_FN(void, setVFOV, (ObjectID, camera), (U32, vfov))
-EV_NS_DEF_FN(void, setAspectRatio, (ObjectID, camera), (F32, aspectRatio))
-EV_NS_DEF_FN(void, setNearPlane, (ObjectID, camera), (F32, nearPlane))
-EV_NS_DEF_FN(void, setFarPlane, (ObjectID, camera), (F32, farPlane))
-
-EV_NS_DEF_FN(void, getProjectionMat, (ObjectID, camera), (Matrix4x4, outProjMat))
-EV_NS_DEF_FN(void, getViewMat, (ObjectID, camera), (Matrix4x4, outViewMat))
+EV_NS_DEF_FN(void, getProjectionMat, (GameScene, scene_handle), (GameObject, camera), (Matrix4x4, outProjMat))
+EV_NS_DEF_FN(void, getViewMat, (GameScene, scene_handle), (GameObject, camera), (Matrix4x4, outViewMat))
 
 EV_NS_DEF_END(Camera)

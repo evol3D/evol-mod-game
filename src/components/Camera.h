@@ -22,13 +22,6 @@ typedef struct {
 static CONST_STR CameraComponentName = "CameraComponent";
 static U64 CameraComponentID;
 
-/* ==============Main Camera Component============== */
-typedef struct {
-  U64 entt;
-} MainCamera;
-static CONST_STR MainCameraName = "MainCamera";
-static U64 MainCameraID;
-
 
 // ===============
 // Tag Definitions
