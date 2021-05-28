@@ -88,8 +88,9 @@ _ev_object_getworldtransform(
     GameScene world,
     GameObject entt);
 
-void
-init_scripting_api();
+void 
+ev_gamemod_scriptapi_loader(
+    ScriptContextHandle ctx_h);
 
 void
 transform_setdirty(
@@ -561,7 +562,12 @@ EV_CONSTRUCTOR
     imports(GameData.physics_module, (PhysicsWorld));
   }
 
-  init_scripting_api();
+  GameData.script_module = evol_loadmodule("script");
+  if(GameData.script_module) {
+    imports(GameData.script_module, (ScriptContext, ScriptInterface));
+    ScriptInterface->registerAPILoadFn(ev_gamemod_scriptapi_loader);
+  }
+
 }
 
 EV_DESTRUCTOR 
@@ -666,27 +672,27 @@ _ev_object_getrotationeuler_wrapper(
 }
 
 void 
-init_scripting_api()
+ev_gamemod_scriptapi_loader(
+    ScriptContextHandle ctx_h)
 {
+  ScriptType voidSType = ScriptInterface->getType(ctx_h, "void");
+  ScriptType floatSType = ScriptInterface->getType(ctx_h, "float");
+  ScriptType ullSType = ScriptInterface->getType(ctx_h, "unsigned long long");
 
-  ScriptType voidSType = ScriptInterface->getType("void");
-  ScriptType floatSType = ScriptInterface->getType("float");
-  ScriptType ullSType = ScriptInterface->getType("unsigned long long");
-
-  ScriptType vec3SType = ScriptInterface->addStruct("Vec3", sizeof(Vec3), 3, (ScriptStructMember[]) {
+  ScriptType vec3SType = ScriptInterface->addStruct(ctx_h, "Vec3", sizeof(Vec3), 3, (ScriptStructMember[]) {
       {"x", floatSType, offsetof(Vec3, x)},
       {"y", floatSType, offsetof(Vec3, y)},
       {"z", floatSType, offsetof(Vec3, z)}
   });
 
-  ScriptInterface->addFunction(_ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
-  ScriptInterface->addFunction(_ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
+  ScriptInterface->addFunction(ctx_h, _ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(ctx_h, _ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
 
-  ScriptInterface->addFunction(_ev_object_getrotationeuler_wrapper, "ev_object_getrotationeuler", vec3SType, 1, (ScriptType[]){ullSType});
-  ScriptInterface->addFunction(_ev_object_setrotationeuler_wrapper, "ev_object_setrotationeuler", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
+  ScriptInterface->addFunction(ctx_h, _ev_object_getrotationeuler_wrapper, "ev_object_getrotationeuler", vec3SType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(ctx_h, _ev_object_setrotationeuler_wrapper, "ev_object_setrotationeuler", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
 
   /* ScriptInterface->addFunction(_ev_object_getscale_wrapper, "ev_object_getscale", vec3SType, 1, (ScriptType[]){ullSType}); */
   /* ScriptInterface->addFunction(_ev_object_setscale_wrapper, "ev_object_setscale", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
 
-  ScriptInterface->loadAPI("subprojects/evmod_game/script_api.lua");
+  ScriptInterface->loadAPI(ctx_h, "subprojects/evmod_game/script_api.lua");
 }
