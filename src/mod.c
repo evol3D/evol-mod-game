@@ -8,10 +8,14 @@
 #include <evol/meta/module_import.h>
 #define IMPORT_MODULE evmod_physics
 #include <evol/meta/module_import.h>
+#define IMPORT_MODULE evmod_script
+#include <evol/meta/module_import.h>
 
 typedef struct {
   ECSGameWorldHandle ecs_world;
   PhysicsWorldHandle physics_world;
+  ScriptContextHandle script_context;
+
   GameObject activeCamera;
 } GameSceneStruct;
 
@@ -22,11 +26,13 @@ gamescenestruct_destr(
   GameSceneStruct *scn = (GameSceneStruct *)data;
   GameECS->destroyWorld(scn->ecs_world);
   PhysicsWorld->destroyWorld(scn->physics_world);
+  ScriptContext->destroyContext(scn->script_context);
 }
 
 struct evGameData {
   evolmodule_t ecs_module;
   evolmodule_t physics_module;
+  evolmodule_t script_module;
   vec(GameSceneStruct) scenes;
   GameScene activeScene;
 } GameData;
@@ -44,13 +50,16 @@ ev_game_newscene()
   GameSceneStruct newscene = {
     .ecs_world = GameECS->newWorld(),
     .physics_world = PhysicsWorld->newWorld(),
+    .script_context = ScriptContext->newContext(),
+
     .activeCamera = 0
   };
 
-  ev_log_trace("New game scene created: { .ecs_world = %llu, .physics_world = %llu, .activeCamera = %llu }",
+  ev_log_trace("New game scene created: { .ecs_world = %llu, .physics_world = %llu, .activeCamera = %llu, .script_context = %llu }",
       newscene.ecs_world,
       newscene.physics_world,
-      newscene.activeCamera);
+      newscene.activeCamera,
+      newscene.script_context);
 
   GameScene newscene_handle = vec_push(&GameData.scenes, &newscene);
   ev_log_trace("New scene given handle { %llu }", newscene_handle);
@@ -257,6 +266,14 @@ ev_scene_getphysicsworld(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   return scene.physics_world;
+}
+
+ScriptContextHandle
+ev_scene_getscriptcontext(
+    GameScene scene_handle)
+{
+  GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
+  return scene.script_context;
 }
 
 void
@@ -558,6 +575,10 @@ EV_DESTRUCTOR
   if(GameData.physics_module) {
     evol_unloadmodule(GameData.physics_module);
   }
+
+  if(GameData.script_module) {
+    evol_unloadmodule(GameData.script_module);
+  }
 }
 
 EV_BINDINGS
@@ -573,6 +594,7 @@ EV_BINDINGS
   EV_NS_BIND_FN(Scene, createCamera, ev_scene_createcamera);
   EV_NS_BIND_FN(Scene, getECSWorld, ev_scene_getecsworld);
   EV_NS_BIND_FN(Scene, getPhysicsWorld, ev_scene_getphysicsworld);
+  EV_NS_BIND_FN(Scene, getScriptContext, ev_scene_getscriptcontext);
   EV_NS_BIND_FN(Scene, getActiveCamera, ev_scene_getactivecamera);
   EV_NS_BIND_FN(Scene, setActiveCamera, ev_scene_setactivecamera);
 
@@ -643,15 +665,9 @@ _ev_object_getrotationeuler_wrapper(
   out->z = res.z;
 }
 
-#define IMPORT_MODULE evmod_script
-#include <evol/meta/module_import.h>
-
 void 
 init_scripting_api()
 {
-  evolmodule_t scripting_module = evol_loadmodule("script");
-  if(!scripting_module) return;
-  imports(scripting_module, (ScriptInterface));
 
   ScriptType voidSType = ScriptInterface->getType("void");
   ScriptType floatSType = ScriptInterface->getType("float");
@@ -673,8 +689,4 @@ init_scripting_api()
   /* ScriptInterface->addFunction(_ev_object_setscale_wrapper, "ev_object_setscale", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
 
   ScriptInterface->loadAPI("subprojects/evmod_game/script_api.lua");
-
-  evol_unloadmodule(scripting_module);
-  // Invalidating namespace reference as the module is unloaded
-  ScriptInterface = NULL;
 }
