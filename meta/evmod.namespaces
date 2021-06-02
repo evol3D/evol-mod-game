@@ -22,6 +22,8 @@ EV_NS_DEF_FN(GenericHandle, getScriptContext, (GameScene, scene_handle))
 EV_NS_DEF_FN(GameObject, getActiveCamera, (GameScene, scene_handle))
 EV_NS_DEF_FN(void, setActiveCamera, (GameScene, scene_handle), (GameObject, camera))
 
+EV_NS_DEF_FN(GameObject, getObject, (GameScene, scene_handle), (CONST_STR, name))
+
 
 EV_NS_DEF_END(Scene)
 
@@ -42,6 +44,7 @@ EV_NS_DEF_FN(Vec3, getScale,    (GameScene, scene_handle), (GameObject, obj))
 EV_NS_DEF_FN(PTR, getComponent, (GameScene, scene_handle), (GameObject, obj), (GenericHandle, comp_id))
 EV_NS_DEF_FN(bool, hasComponent, (GameScene, scene_handle), (GameObject, obj), (GenericHandle, comp_id))
 EV_NS_DEF_FN(bool, setComponent, (GameScene, scene_handle), (GameObject, obj), (GenericHandle, comp_id), (PTR, data))
+EV_NS_DEF_FN(GameObject, getChild, (GameScene, scene_handle), (GameObject, parent), (CONST_STR, name))
 
 EV_NS_DEF_END(Object)
 

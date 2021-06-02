@@ -426,6 +426,25 @@ _ev_object_setrotation(
   transform_setdirty(scene.ecs_world, entt);
 }
 
+GameObject
+ev_scene_getobject(
+    GameScene scene_handle,
+    CONST_STR name)
+{
+  GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
+  return GameECS->getEntityFromName(scene.ecs_world, name);
+}
+
+GameObject
+ev_object_getchild(
+    GameScene scene_handle,
+    GameObject parent,
+    CONST_STR name)
+{
+  GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
+  return GameECS->getChildFromName(scene.ecs_world, parent, name);
+}
+
 void
 _ev_object_setposition(
     GameScene scene_handle,
@@ -922,6 +941,7 @@ EV_BINDINGS
   EV_NS_BIND_FN(Scene, getScriptContext, ev_scene_getscriptcontext);
   EV_NS_BIND_FN(Scene, getActiveCamera, ev_scene_getactivecamera);
   EV_NS_BIND_FN(Scene, setActiveCamera, ev_scene_setactivecamera);
+  EV_NS_BIND_FN(Scene, getObject, ev_scene_getobject);
 
   EV_NS_BIND_FN(Object, getWorldTransform, _ev_object_getworldtransform);
   EV_NS_BIND_FN(Object, setWorldTransform, _ev_object_setworldtransform);
@@ -931,6 +951,7 @@ EV_BINDINGS
   EV_NS_BIND_FN(Object, getPosition, _ev_object_getposition);
   EV_NS_BIND_FN(Object, getRotation, _ev_object_getrotation);
   EV_NS_BIND_FN(Object, getScale,    _ev_object_getscale);
+  EV_NS_BIND_FN(Object, getChild,     ev_object_getchild);
 
   // ECS shortcuts
   EV_NS_BIND_FN(Object, getComponent, ev_object_getcomponent);
