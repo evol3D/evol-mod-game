@@ -267,17 +267,20 @@ ev_sceneloader_loadrigidbodycomponent(
     collShapeHandle = CollisionShape->newSphere(physWorld, radius);
     evstring_free(radius_id);
   } else if(!evstring_cmp(collisionshapetype, BoxCollisionShapeSTR)) {
-    // TODO
-    UNIMPLEMENTED();
-    /* collShapeHandle = CollisionShape->newBox(physWorld, halfExtents); */
+    Vec3 halfExtents;
+    evstring halfextents_id = evstring_newfmt("%s.collisionShape.halfExtents[x]", *comp_id);
+    size_t halfextents_id_len = evstring_len(halfextents_id);
+    for(char i = 0; i < 3; i++) {
+      halfextents_id[halfextents_id_len-2] = '0' + i;
+      ((float*)&halfExtents)[i] = (float)evjs_get(json, halfextents_id)->as_num;
+    }
+    evstring_free(halfextents_id);
+    collShapeHandle = CollisionShape->newBox(physWorld, halfExtents);
   }
 
   info.collisionShape = collShapeHandle;
 
-  // TODO see if I need to set position and rotation or will whey be synced
-  // automatically through the motion state.
-  RigidbodyHandle rbHandle = Rigidbody->addToEntity(scene, obj, &info);
-  (void)rbHandle;
+  Rigidbody->addToEntity(scene, obj, &info);
 
   evstring_free(collisionshapetype);
   evstring_free(collisionshapetype_id);
