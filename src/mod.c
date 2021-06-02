@@ -65,7 +65,7 @@ ev_game_setactivescene(
 }
 
 GameScene
-ev_game_newscene()
+ev_scene_create()
 {
   GameSceneStruct newscene = {
     .ecs_world = GameECS->newWorld(),
@@ -354,10 +354,10 @@ ev_sceneloader_loadnode(
 }
 
 GameScene
-ev_game_loadscenefromfile(
+ev_scene_loadfromfile(
     CONST_STR path)
 {
-  GameScene newscene = ev_game_newscene();
+  GameScene newscene = ev_scene_create();
   AssetHandle scenefile_handle = Asset->load(path);
   JSONAsset scene_jsonasset = JSONLoader->loadAsset(scenefile_handle);
   evjson_t *scene_desc = (evjson_t*)scene_jsonasset.json_data;
@@ -900,11 +900,11 @@ EV_DESTRUCTOR
 
 EV_BINDINGS
 {
-  EV_NS_BIND_FN(Game, newScene, ev_game_newscene);
-  EV_NS_BIND_FN(Game, loadSceneFromFile, ev_game_loadscenefromfile);
   EV_NS_BIND_FN(Game, setActiveScene, ev_game_setactivescene);
   EV_NS_BIND_FN(Game, progress, ev_game_progress);
 
+  EV_NS_BIND_FN(Scene, create, ev_scene_create);
+  EV_NS_BIND_FN(Scene, loadFromFile, ev_scene_loadfromfile);
   EV_NS_BIND_FN(Scene, createObject, ev_scene_createobject);
   EV_NS_BIND_FN(Scene, createChildObject, ev_scene_createchildobject);
   EV_NS_BIND_FN(Scene, addChildToObject, ev_scene_addchildtoobject);
