@@ -46,6 +46,10 @@ struct evGameData {
 } GameData;
 
 GameObject
+ev_scene_getobject(
+    GameScene scene_handle,
+    CONST_STR name);
+GameObject
 ev_scene_getactivecamera(
     GameScene scene_handle);
 GameObject
@@ -207,11 +211,6 @@ ev_sceneloader_loadcameracomponent(
   }
 
   GameECS->setComponent(ecs_world, obj, CameraComponentID, &comp);
-
-  // TODO remove this
-  if(ev_scene_getactivecamera(scene) == 0) {
-    ev_scene_setactivecamera(scene, obj);
-  }
 
   evstring_free(cameraview_id);
 }
@@ -381,6 +380,10 @@ ev_scene_loadfromfile(
     ev_sceneloader_loadnode(newscene, scene_desc, &node_id, 0);
     evstring_free(node_id);
   }
+
+  evstring activeCamera = evstring_refclone(evjs_get(scene_desc, "activeCamera")->as_str);
+  ev_scene_setactivecamera(newscene, ev_scene_getobject(newscene, activeCamera));
+  evstring_free(activeCamera);
 
   Asset->free(scenefile_handle);
   return newscene;
