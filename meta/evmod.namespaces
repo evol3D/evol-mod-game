@@ -10,6 +10,8 @@ EV_NS_DEF_BEGIN(Scene)
 
 EV_NS_DEF_FN(GameScene, create, (,))
 EV_NS_DEF_FN(GameScene, loadFromFile, (CONST_STR, path))
+EV_NS_DEF_FN(void, setName, (GameScene, scene_handle), (CONST_STR, name))
+EV_NS_DEF_FN(GameScene, getFromName, (CONST_STR, name))
 EV_NS_DEF_FN(GameObject, createObject, (GameScene, scene_handle))
 EV_NS_DEF_FN(GameObject, createChildObject, (GameScene, scene_handle), (GameObject, parent))
 EV_NS_DEF_FN(void, addChildToObject, (GameScene, scene_handle), (GameObject, parent), (GameObject, child))

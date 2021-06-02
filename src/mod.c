@@ -15,6 +15,8 @@
 
 #include <evjson.h>
 
+HashmapDefine(evstring, GameScene, evstring_free, NULL);
+
 typedef struct {
   ECSGameWorldHandle ecs_world;
   PhysicsWorldHandle physics_world;
@@ -39,6 +41,7 @@ struct evGameData {
   evolmodule_t script_module;
   evolmodule_t asset_module;
   vec(GameSceneStruct) scenes;
+  Map(evstring, GameScene) scene_map;
   GameScene activeScene;
 } GameData;
 
@@ -865,6 +868,7 @@ EV_CONSTRUCTOR
   static_assert(sizeof(GameObject) == sizeof(ECSEntityID), "ObjectID not the same size as ECSEntityID");
 
   GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
+  GameData.scene_map = Hashmap(evstring, GameScene).new();
   vec_setlen((vec_t*)&GameData.scenes, 1);
   GameData.scenes[0] = (GameSceneStruct){NULL};
   GameData.activeScene = 0;
@@ -900,12 +904,12 @@ EV_CONSTRUCTOR
   if(GameData.asset_module) {
     imports(GameData.asset_module, (Asset, TextLoader, JSONLoader));
   }
-
 }
 
 EV_DESTRUCTOR 
 {
   vec_fini(GameData.scenes);
+  Hashmap(evstring,GameScene).free(GameData.scene_map);
 
   if(GameData.asset_module) {
     evol_unloadmodule(GameData.asset_module);
@@ -924,6 +928,21 @@ EV_DESTRUCTOR
   }
 }
 
+void
+ev_scene_setname(
+    GameScene scene_handle,
+    CONST_STR name)
+{
+  Hashmap(evstring,GameScene).push(GameData.scene_map, evstring_new(name), scene_handle);
+}
+
+GameScene
+ev_scene_getfromname(
+    CONST_STR name)
+{
+  return *(GameScene*)Hashmap(evstring, GameScene).get(GameData.scene_map, name);
+}
+
 EV_BINDINGS
 {
   EV_NS_BIND_FN(Game, setActiveScene, ev_game_setactivescene);
@@ -931,6 +950,8 @@ EV_BINDINGS
 
   EV_NS_BIND_FN(Scene, create, ev_scene_create);
   EV_NS_BIND_FN(Scene, loadFromFile, ev_scene_loadfromfile);
+  EV_NS_BIND_FN(Scene, setName, ev_scene_setname);
+  EV_NS_BIND_FN(Scene, getFromName, ev_scene_getfromname);
   EV_NS_BIND_FN(Scene, createObject, ev_scene_createobject);
   EV_NS_BIND_FN(Scene, createChildObject, ev_scene_createchildobject);
   EV_NS_BIND_FN(Scene, addChildToObject, ev_scene_addchildtoobject);
