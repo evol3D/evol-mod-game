@@ -298,6 +298,7 @@ ev_sceneloader_loadnode(
   evstring RigidbodyComponentSTR = evstring_new("RigidbodyComponent");
   evstring ScriptComponentSTR = evstring_new("ScriptComponent");
   evstring CameraComponentSTR = evstring_new("CameraComponent");
+  ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene);
 
   GameObject obj;
   if(parent == 0) {
@@ -305,6 +306,12 @@ ev_sceneloader_loadnode(
   } else {
     obj = ev_scene_createchildobject(scene, parent);
   }
+  evstring nodename_id = evstring_newfmt("%s.id", *id);
+  evstring nodename = evstring_refclone(evjs_get(json, nodename_id)->as_str);
+  GameECS->setEntityName(ecs_world, obj, nodename);
+  evstring_free(nodename);
+  evstring_free(nodename_id);
+
   EV_DEFER(
       evstring components_count_id = evstring_newfmt("%s.components.len", *id),
       evstring_free(components_count_id))
