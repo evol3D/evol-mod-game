@@ -1,6 +1,7 @@
 EV_NS_DEF_BEGIN(Game)
 
 EV_NS_DEF_FN(GameScene, newScene, (,))
+EV_NS_DEF_FN(GameScene, loadSceneFromFile, (CONST_STR, path))
 EV_NS_DEF_FN(void, setActiveScene, (GameScene, scene_handle))
 EV_NS_DEF_FN(U32, progress, (F32, deltaTime))
 

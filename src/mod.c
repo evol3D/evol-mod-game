@@ -10,6 +10,10 @@
 #include <evol/meta/module_import.h>
 #define IMPORT_MODULE evmod_script
 #include <evol/meta/module_import.h>
+#define IMPORT_MODULE evmod_assets
+#include IMPORT_MODULE_H
+
+#include <evjson.h>
 
 typedef struct {
   ECSGameWorldHandle ecs_world;
@@ -33,9 +37,25 @@ struct evGameData {
   evolmodule_t ecs_module;
   evolmodule_t physics_module;
   evolmodule_t script_module;
+  evolmodule_t asset_module;
   vec(GameSceneStruct) scenes;
   GameScene activeScene;
 } GameData;
+
+GameObject
+ev_scene_getactivecamera(
+    GameScene scene_handle);
+GameObject
+ev_scene_createchildobject(
+    GameScene scene_handle,
+    GameObject parent);
+
+PhysicsWorldHandle
+ev_scene_getphysicsworld(
+    GameScene scene_handle);
+ECSGameWorldHandle
+ev_scene_getecsworld(
+    GameScene scene_handle);
 
 void
 ev_game_setactivescene(
@@ -69,6 +89,288 @@ ev_game_newscene()
   }
 
   return newscene_handle;
+}
+
+void
+ev_sceneloader_loadtransformcomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  Vec3 position = {0};
+  Vec3 rotation = {0};
+  Vec3 scale = {0};
+
+  evstring pos_id = evstring_newfmt("%s.position[x]", *comp_id);
+  size_t pos_id_len = evstring_len(pos_id);
+  for(char i = 0; i < 3; i++) {
+    pos_id[pos_id_len-2] = '0' + i;
+    ((float*)&position)[i] = (float)evjs_get(json, pos_id)->as_num;
+  }
+
+  evstring rot_id = evstring_newfmt("%s.rotation[x]", *comp_id);
+  size_t rot_id_len = evstring_len(rot_id);
+  for(char i = 0; i < 3; i++) {
+    rot_id[rot_id_len-2] = '0'+i;
+    ((float*)&rotation)[i] = (float)evjs_get(json,rot_id)->as_num;
+  }
+
+  evstring scale_id = evstring_newfmt("%s.scale[x]", *comp_id);
+  size_t scale_id_len = evstring_len(scale_id);
+  for(char i = 0; i < 3; i++) {
+    scale_id[scale_id_len-2] = '0'+i;
+    ((float*)&scale)[i] = (float)evjs_get(json,scale_id)->as_num;
+  }
+
+  evstring_free(scale_id);
+  evstring_free(rot_id);
+  evstring_free(pos_id);
+
+  // Build rotation quaternion from loaded euler angles
+  Vec4 rot_quat;
+  Matrix4x4 rotationMatrix;
+  glm_euler(&rotation, rotationMatrix);
+  glm_mat4_quat(rotationMatrix, &rot_quat);
+
+  ev_object_settransform(scene, obj, position, rot_quat, scale);
+}
+
+void
+ev_sceneloader_loadscriptcomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  evstring scriptname_id = evstring_newfmt("%s.script_name", *comp_id);
+  evstring scriptpath_id = evstring_newfmt("%s.script_path", *comp_id);
+  evstring scriptname = evstring_refclone(evjs_get(json,scriptname_id)->as_str);
+  evstring scriptpath = evstring_refclone(evjs_get(json,scriptpath_id)->as_str);
+
+  AssetHandle script_asset = Asset->load(scriptpath);
+  TextAsset script_text = TextLoader->loadAsset(script_asset);
+  ScriptHandle script_handle = Script->new(scriptname, script_text.text);
+  Asset->free(script_asset);
+
+  Script->addToEntity(scene, obj, script_handle);
+
+  evstring_free(scriptpath);
+  evstring_free(scriptname);
+  evstring_free(scriptname_id);
+  evstring_free(scriptpath_id);
+}
+
+void
+ev_sceneloader_loadcameracomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  evstring cameraview_id = evstring_newfmt("%s.view", *comp_id);
+  evstr_ref cameraview = evjs_get(json,cameraview_id)->as_str;
+
+  ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene);
+  CameraComponent comp;
+
+  switch(*(cameraview.data + cameraview.offset)) {
+    case 'P':
+      comp.viewType = EV_CAMERA_VIEWTYPE_PERSPECTIVE;
+
+      evstring fov_id = evstring_newfmt("%s.fov", *comp_id);
+      evstring near_id = evstring_newfmt("%s.near", *comp_id);
+      evstring far_id = evstring_newfmt("%s.far", *comp_id);
+      evstring aspectratio_id = evstring_newfmt("%s.aspectRatio", *comp_id);
+
+      comp.hfov = (U32)evjs_get(json, fov_id)->as_num;
+      comp.nearPlane = (F32)evjs_get(json, near_id)->as_num;
+      comp.farPlane = (F32)evjs_get(json, far_id)->as_num;
+      comp.aspectRatio = (F32)evjs_get(json, aspectratio_id)->as_num;
+
+      evstring_free(fov_id);
+      evstring_free(near_id);
+      evstring_free(far_id);
+      evstring_free(aspectratio_id);
+      break;
+    case 'O':
+      comp.viewType = EV_CAMERA_VIEWTYPE_ORTHOGRAPHIC;
+      // TODO Implement
+      UNIMPLEMENTED();
+      break;
+    default:
+      ev_log_error("Camera View type unknown `%.*s`", cameraview.len, cameraview.data + cameraview.offset);
+      break;
+  }
+
+  GameECS->setComponent(ecs_world, obj, CameraComponentID, &comp);
+
+  // TODO remove this
+  if(ev_scene_getactivecamera(scene) == 0) {
+    ev_scene_setactivecamera(scene, obj);
+  }
+
+  evstring_free(cameraview_id);
+}
+
+void
+ev_sceneloader_loadrigidbodycomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  evstring SphereCollisionShapeSTR = evstring_new("Sphere");
+  evstring BoxCollisionShapeSTR = evstring_new("Box");
+
+  RigidbodyInfo info;
+
+  evstring rigidbodytype_id = evstring_newfmt("%s.rigidbodyType", *comp_id);
+  evstr_ref rigidbodyType = evjs_get(json,rigidbodytype_id)->as_str;
+  switch(*(rigidbodyType.data + rigidbodyType.offset)) {
+    case 'D':
+      info.type = EV_RIGIDBODY_DYNAMIC;
+      break;
+    case 'S':
+      info.type = EV_RIGIDBODY_STATIC;
+      break;
+    case 'K':
+      info.type = EV_RIGIDBODY_KINEMATIC;
+      break;
+    default:
+      ev_log_warn("Unidentified RigidbodyType `%.*s`. Falling back to `Kinematic`", rigidbodyType.len, (rigidbodyType.data + rigidbodyType.offset));
+      info.type = EV_RIGIDBODY_KINEMATIC;
+      break;
+  }
+  evstring_free(rigidbodytype_id);
+
+  evstring mass_id = evstring_newfmt("%s.mass", *comp_id);
+  info.mass = (F32)evjs_get(json, mass_id)->as_num;
+  evstring_free(mass_id);
+
+  evstring restitution_id = evstring_newfmt("%s.restitution", *comp_id);
+  info.restitution = (F32)evjs_get(json, restitution_id)->as_num;
+  evstring_free(restitution_id);
+
+
+  evstring collisionshapetype_id = evstring_newfmt("%s.collisionShape.type", *comp_id);
+  evstring collisionshapetype = evstring_refclone(evjs_get(json, collisionshapetype_id)->as_str);
+
+  PhysicsWorldHandle physWorld = ev_scene_getphysicsworld(scene);
+  CollisionShapeHandle collShapeHandle;
+  if(!evstring_cmp(collisionshapetype, SphereCollisionShapeSTR)) {
+    evstring radius_id = evstring_newfmt("%s.collisionShape.radius", *comp_id);
+    F32 radius = (F32)evjs_get(json, radius_id)->as_num;
+    collShapeHandle = CollisionShape->newSphere(physWorld, radius);
+    evstring_free(radius_id);
+  } else if(!evstring_cmp(collisionshapetype, BoxCollisionShapeSTR)) {
+    // TODO
+    UNIMPLEMENTED();
+    /* collShapeHandle = CollisionShape->newBox(physWorld, halfExtents); */
+  }
+
+  info.collisionShape = collShapeHandle;
+
+  // TODO see if I need to set position and rotation or will whey be synced
+  // automatically through the motion state.
+  RigidbodyHandle rbHandle = Rigidbody->addToEntity(scene, obj, &info);
+  (void)rbHandle;
+
+  evstring_free(collisionshapetype);
+  evstring_free(collisionshapetype_id);
+
+  evstring_free(SphereCollisionShapeSTR);
+  evstring_free(BoxCollisionShapeSTR);
+}
+
+GameObject
+ev_scene_createobject(
+    GameScene scene_handle);
+
+void
+ev_sceneloader_loadnode(
+    GameScene scene,
+    evjson_t *json,
+    evstring *id,
+    GameObject parent)
+{
+  evstring TransformComponentSTR = evstring_new("TransformComponent");
+  evstring RigidbodyComponentSTR = evstring_new("RigidbodyComponent");
+  evstring ScriptComponentSTR = evstring_new("ScriptComponent");
+  evstring CameraComponentSTR = evstring_new("CameraComponent");
+
+  GameObject obj;
+  if(parent == 0) {
+    obj = ev_scene_createobject(scene);
+  } else {
+    obj = ev_scene_createchildobject(scene, parent);
+  }
+  EV_DEFER(
+      evstring components_count_id = evstring_newfmt("%s.components.len", *id),
+      evstring_free(components_count_id))
+  {
+    int components_count = (int)evjs_get(json, components_count_id)->as_num;
+    for(int i = 0; i < components_count; i++) {
+      evstring component_id = evstring_newfmt("%s.components[%d]", *id, i);
+      evstring component_type_id = evstring_newfmt("%s.type", component_id);
+      evstring component_type = evstring_refclone(evjs_get(json, component_type_id)->as_str);
+
+      if(!evstring_cmp(component_type, TransformComponentSTR)) {
+        ev_sceneloader_loadtransformcomponent(scene, obj, json, &component_id);
+      } else if(!evstring_cmp(component_type, ScriptComponentSTR)) {
+        ev_sceneloader_loadscriptcomponent(scene, obj, json, &component_id);
+      } else if(!evstring_cmp(component_type, RigidbodyComponentSTR)) {
+        ev_sceneloader_loadrigidbodycomponent(scene, obj, json, &component_id);
+      } else if(!evstring_cmp(component_type, CameraComponentSTR)) {
+        ev_sceneloader_loadcameracomponent(scene, obj, json, &component_id);
+      }
+
+
+      evstring_free(component_type);
+      evstring_free(component_type_id);
+      evstring_free(component_id);
+    }
+  }
+
+  EV_DEFER(
+      evstring children_count_id = evstring_newfmt("%s.children.len", *id),
+      evstring_free(children_count_id))
+  {
+    evjson_entry *children_count_res = evjs_get(json, children_count_id);
+    if(children_count_res) {
+      int children_count = (int)children_count_res->as_num;
+      for(int i = 0; i < children_count; i++) {
+        evstring child_id = evstring_newfmt("%s.children[%d]", *id, i);
+        ev_sceneloader_loadnode(scene, json, &child_id, obj);
+        evstring_free(child_id);
+      }
+    }
+  }
+
+  evstring_free(TransformComponentSTR);
+  evstring_free(CameraComponentSTR);
+  evstring_free(RigidbodyComponentSTR);
+  evstring_free(ScriptComponentSTR);
+}
+
+GameScene
+ev_game_loadscenefromfile(
+    CONST_STR path)
+{
+  GameScene newscene = ev_game_newscene();
+  AssetHandle scenefile_handle = Asset->load(path);
+  JSONAsset scene_jsonasset = JSONLoader->loadAsset(scenefile_handle);
+  evjson_t *scene_desc = (evjson_t*)scene_jsonasset.json_data;
+
+  int nodes_count = (int)evjs_get(scene_desc, "nodes.len")->as_num;
+  for(int i = 0; i < nodes_count; i++) {
+    evstring node_id = evstring_newfmt("nodes[%d]", i);
+    ev_sceneloader_loadnode(newscene, scene_desc, &node_id, 0);
+    evstring_free(node_id);
+  }
+
+  Asset->free(scenefile_handle);
+  return newscene;
 }
 
 U32
@@ -559,13 +861,18 @@ EV_CONSTRUCTOR
 
   GameData.physics_module = evol_loadmodule("physics");
   if(GameData.physics_module) {
-    imports(GameData.physics_module, (PhysicsWorld));
+    imports(GameData.physics_module, (PhysicsWorld, CollisionShape, Rigidbody));
   }
 
   GameData.script_module = evol_loadmodule("script");
   if(GameData.script_module) {
-    imports(GameData.script_module, (ScriptContext, ScriptInterface));
+    imports(GameData.script_module, (Script, ScriptContext, ScriptInterface));
     ScriptInterface->registerAPILoadFn(ev_gamemod_scriptapi_loader);
+  }
+
+  GameData.asset_module = evol_loadmodule("assetmanager");
+  if(GameData.asset_module) {
+    imports(GameData.asset_module, (Asset, TextLoader, JSONLoader));
   }
 
 }
@@ -573,6 +880,10 @@ EV_CONSTRUCTOR
 EV_DESTRUCTOR 
 {
   vec_fini(GameData.scenes);
+
+  if(GameData.asset_module) {
+    evol_unloadmodule(GameData.asset_module);
+  }
 
   if(GameData.ecs_module) {
     evol_unloadmodule(GameData.ecs_module);
@@ -590,6 +901,7 @@ EV_DESTRUCTOR
 EV_BINDINGS
 {
   EV_NS_BIND_FN(Game, newScene, ev_game_newscene);
+  EV_NS_BIND_FN(Game, loadSceneFromFile, ev_game_loadscenefromfile);
   EV_NS_BIND_FN(Game, setActiveScene, ev_game_setactivescene);
   EV_NS_BIND_FN(Game, progress, ev_game_progress);
 
