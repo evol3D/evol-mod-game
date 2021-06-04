@@ -279,7 +279,7 @@ ev_sceneloader_loadrigidbodycomponent(
 
   info.collisionShape = collShapeHandle;
 
-  Rigidbody->addToEntity(scene, obj, &info);
+  Rigidbody->addToEntity(scene, obj, info);
 
   evstring_free(collisionshapetype);
   evstring_free(collisionshapetype_id);
