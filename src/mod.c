@@ -893,12 +893,6 @@ EV_CONSTRUCTOR
 {
   static_assert(sizeof(GameObject) == sizeof(ECSEntityID), "ObjectID not the same size as ECSEntityID");
 
-  GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
-  GameData.scene_map = Hashmap(evstring, GameScene).new();
-  vec_setlen((vec_t*)&GameData.scenes, 1);
-  GameData.scenes[0] = (GameSceneStruct){NULL};
-  GameData.activeScene = 0;
-
   GameData.ecs_module = evol_loadmodule("ecs");
   if(GameData.ecs_module) {
     imports(GameData.ecs_module, (ECS, GameECS));
@@ -915,11 +909,6 @@ EV_CONSTRUCTOR
     }
   }
 
-  GameData.physics_module = evol_loadmodule("physics");
-  if(GameData.physics_module) {
-    imports(GameData.physics_module, (PhysicsWorld, CollisionShape, Rigidbody));
-  }
-
   GameData.script_module = evol_loadmodule("script");
   if(GameData.script_module) {
     imports(GameData.script_module, (Script, ScriptContext, ScriptInterface));
@@ -930,6 +919,20 @@ EV_CONSTRUCTOR
   if(GameData.asset_module) {
     imports(GameData.asset_module, (Asset, TextLoader, JSONLoader));
   }
+
+  GameData.physics_module = evol_loadmodule("physics");
+  if(GameData.physics_module) {
+    imports(GameData.physics_module, (PhysicsWorld, CollisionShape, Rigidbody));
+  }
+
+  GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
+  GameData.scene_map = Hashmap(evstring, GameScene).new();
+  vec_setlen((vec_t*)&GameData.scenes, 1);
+  GameData.scenes[0] = (GameSceneStruct){
+    .physics_world = PhysicsWorld->invalidHandle(),
+    .script_context = ScriptContext->invalidHandle()
+  };
+  GameData.activeScene = 0;
 }
 
 EV_DESTRUCTOR 
@@ -937,16 +940,16 @@ EV_DESTRUCTOR
   vec_fini(GameData.scenes);
   Hashmap(evstring,GameScene).free(GameData.scene_map);
 
+  if(GameData.physics_module) {
+    evol_unloadmodule(GameData.physics_module);
+  }
+
   if(GameData.asset_module) {
     evol_unloadmodule(GameData.asset_module);
   }
 
   if(GameData.ecs_module) {
     evol_unloadmodule(GameData.ecs_module);
-  }
-
-  if(GameData.physics_module) {
-    evol_unloadmodule(GameData.physics_module);
   }
 
   if(GameData.script_module) {
