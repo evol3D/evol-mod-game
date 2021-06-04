@@ -747,6 +747,26 @@ ev_object_hascomponent(
 }
 
 void
+ev_object_addcomponent(
+    GameScene scene_handle,
+    GameObject entt,
+    GameComponentID comp_id)
+{
+  ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene_handle);
+  GameECS->addComponent(ecs_world, entt, comp_id);
+}
+
+void
+ev_object_addtag(
+    GameScene scene_handle,
+    GameObject entt,
+    GameTagID tag_id)
+{
+  ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene_handle);
+  GameECS->addTag(ecs_world, entt, tag_id);
+}
+
+void
 ev_object_setcomponent(
     GameScene scene_handle,
     GameObject entt,
@@ -984,6 +1004,8 @@ EV_BINDINGS
   EV_NS_BIND_FN(Object, getComponent, ev_object_getcomponent);
   EV_NS_BIND_FN(Object, hasComponent, ev_object_hascomponent);
   EV_NS_BIND_FN(Object, setComponent, ev_object_setcomponent);
+  EV_NS_BIND_FN(Object, addComponent, ev_object_addcomponent);
+  EV_NS_BIND_FN(Object, addTag      , ev_object_addtag);
 
   EV_NS_BIND_FN(Camera, setAspectRatio, _ev_camera_setaspectratio);
   EV_NS_BIND_FN(Camera, setHFOV, _ev_camera_sethfov);
