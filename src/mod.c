@@ -1070,6 +1070,14 @@ ev_game_setactivescenename_wrapper(
   ev_game_setactivescene(ev_scene_getfromname(*name));
 }
 
+void
+ev_scene_getobject_wrapper(
+    GameObject *out,
+    CONST_STR *path)
+{
+  *out = ev_scene_getobject(NULL, *path);
+}
+
 void 
 ev_gamemod_scriptapi_loader(
     ScriptContextHandle ctx_h)
@@ -1095,6 +1103,8 @@ ev_gamemod_scriptapi_loader(
   /* ScriptInterface->addFunction(_ev_object_setscale_wrapper, "ev_object_setscale", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
 
   ScriptInterface->addFunction(ctx_h, ev_game_setactivescenename_wrapper, "ev_game_setactivescenename", voidSType, 1, (ScriptType[]){constCharType});
+
+  ScriptInterface->addFunction(ctx_h, ev_scene_getobject_wrapper, "ev_scene_getobject", ullSType, 1, (ScriptType[]){constCharType});
 
   ScriptInterface->loadAPI(ctx_h, "subprojects/evmod_game/script_api.lua");
 }

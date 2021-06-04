@@ -28,3 +28,7 @@ end
 function gotoScene(name)
   C('ev_game_setactivescenename', name)
 end
+
+function getObject(path)
+  return Entities[C('ev_scene_getobject', path)]
+end
