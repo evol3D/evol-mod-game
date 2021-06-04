@@ -1038,6 +1038,13 @@ _ev_object_getrotationeuler_wrapper(
   out->z = res.z;
 }
 
+void
+ev_game_setactivescenename_wrapper(
+    CONST_STR *name)
+{
+  ev_game_setactivescene(ev_scene_getfromname(*name));
+}
+
 void 
 ev_gamemod_scriptapi_loader(
     ScriptContextHandle ctx_h)
@@ -1045,6 +1052,7 @@ ev_gamemod_scriptapi_loader(
   ScriptType voidSType = ScriptInterface->getType(ctx_h, "void");
   ScriptType floatSType = ScriptInterface->getType(ctx_h, "float");
   ScriptType ullSType = ScriptInterface->getType(ctx_h, "unsigned long long");
+  ScriptType constCharType = ScriptInterface->getType(ctx_h, "const char*");
 
   ScriptType vec3SType = ScriptInterface->addStruct(ctx_h, "Vec3", sizeof(Vec3), 3, (ScriptStructMember[]) {
       {"x", floatSType, offsetof(Vec3, x)},
@@ -1060,6 +1068,8 @@ ev_gamemod_scriptapi_loader(
 
   /* ScriptInterface->addFunction(_ev_object_getscale_wrapper, "ev_object_getscale", vec3SType, 1, (ScriptType[]){ullSType}); */
   /* ScriptInterface->addFunction(_ev_object_setscale_wrapper, "ev_object_setscale", voidSType, 2, (ScriptType[]){ullSType, vec3SType}); */
+
+  ScriptInterface->addFunction(ctx_h, ev_game_setactivescenename_wrapper, "ev_game_setactivescenename", voidSType, 1, (ScriptType[]){constCharType});
 
   ScriptInterface->loadAPI(ctx_h, "subprojects/evmod_game/script_api.lua");
 }

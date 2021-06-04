@@ -24,3 +24,7 @@ EntityMemberSetters['eulerAngles'] = function(entt, rot)
     rb:setRotation(rot)
   end
 end
+
+function gotoScene(name)
+  C('ev_game_setactivescenename', name)
+end
