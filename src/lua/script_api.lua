@@ -1,4 +1,10 @@
 
+EntityMemberGetters['name'] = function(entt)
+  res = C('ev_object_getname', entt)
+  Entities[entt].name = res
+  return res
+end
+
 EntityMemberGetters['position'] = function(entt)
   res = C('ev_object_getposition', entt)
   return Vec3:new(res.x, res.y, res.z)

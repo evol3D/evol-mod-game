@@ -549,6 +549,15 @@ _ev_object_getrotation(
   return comp->rotation;
 }
 
+CONST_STR
+ev_object_getname(
+    GameScene scene_handle,
+    GameObject entt)
+{
+  GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
+  return GameECS->getEntityName(scene.ecs_world,entt);
+}
+
 Vec3
 _ev_object_getposition(
     GameScene scene_handle,
@@ -1037,6 +1046,14 @@ EV_BINDINGS
 }
 
 void
+_ev_object_getname_wrapper(
+    EV_UNALIGNED CONST_STR *out,
+    EV_UNALIGNED ECSEntityID *entt)
+{
+  *out = ev_object_getname(NULL, *entt);
+}
+
+void
 _ev_object_getposition_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
@@ -1109,6 +1126,8 @@ ev_gamemod_scriptapi_loader(
       {"y", floatSType, offsetof(Vec3, y)},
       {"z", floatSType, offsetof(Vec3, z)}
   });
+
+  ScriptInterface->addFunction(ctx_h, _ev_object_getname_wrapper, "ev_object_getname", constCharType, 1, (ScriptType[]){ullSType});
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, _ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
