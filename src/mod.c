@@ -224,6 +224,7 @@ ev_sceneloader_loadrigidbodycomponent(
 {
   evstring SphereCollisionShapeSTR = evstring_new("Sphere");
   evstring BoxCollisionShapeSTR = evstring_new("Box");
+  evstring CapsuleCollisionShapeSTR = evstring_new("Capsule");
 
   RigidbodyInfo info;
 
@@ -274,7 +275,19 @@ ev_sceneloader_loadrigidbodycomponent(
       ((float*)&halfExtents)[i] = (float)evjs_get(json, halfextents_id)->as_num;
     }
     evstring_free(halfextents_id);
+
     collShapeHandle = CollisionShape->newBox(physWorld, halfExtents);
+
+  } else if(!evstring_cmp(collisionshapetype, CapsuleCollisionShapeSTR)) {
+    evstring radius_id = evstring_newfmt("%s.collisionShape.radius", *comp_id);
+    evstring height_id = evstring_newfmt("%s.collisionShape.height", *comp_id);
+    F32 radius = (F32)evjs_get(json, radius_id)->as_num;
+    F32 height = (F32)evjs_get(json, height_id)->as_num;
+
+    collShapeHandle = CollisionShape->newCapsule(physWorld, radius, height);
+
+    evstring_free(radius_id);
+    evstring_free(height_id);
   }
 
   info.collisionShape = collShapeHandle;
@@ -286,6 +299,7 @@ ev_sceneloader_loadrigidbodycomponent(
 
   evstring_free(SphereCollisionShapeSTR);
   evstring_free(BoxCollisionShapeSTR);
+  evstring_free(CapsuleCollisionShapeSTR);
 }
 
 GameObject
