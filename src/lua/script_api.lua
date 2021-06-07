@@ -1,6 +1,7 @@
 
 EntityMemberGetters['position'] = function(entt)
-  return C('ev_object_getposition', entt)
+  res = C('ev_object_getposition', entt)
+  return Vec3:new(res.x, res.y, res.z)
 end
 
 EntityMemberSetters['position'] = function(entt, pos)
