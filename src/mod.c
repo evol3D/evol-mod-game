@@ -425,6 +425,7 @@ _ev_object_getworldtransform(
 
 void 
 ev_gamemod_scriptapi_loader(
+    EVNS_ScriptInterface *ScriptInterface,
     ScriptContextHandle ctx_h);
 
 void
@@ -1123,6 +1124,7 @@ ev_object_getchild_wrapper(
 
 void 
 ev_gamemod_scriptapi_loader(
+    EVNS_ScriptInterface *ScriptInterface,
     ScriptContextHandle ctx_h)
 {
   ScriptType voidSType = ScriptInterface->getType(ctx_h, "void");
