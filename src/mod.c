@@ -240,6 +240,9 @@ ev_sceneloader_loadrigidbodycomponent(
     case 'K':
       info.type = EV_RIGIDBODY_KINEMATIC;
       break;
+    case 'G':
+      info.type = EV_RIGIDBODY_GHOST;
+      break;
     default:
       ev_log_warn("Unidentified RigidbodyType `%.*s`. Falling back to `Kinematic`", rigidbodyType.len, (rigidbodyType.data + rigidbodyType.offset));
       info.type = EV_RIGIDBODY_KINEMATIC;
