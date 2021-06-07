@@ -31,7 +31,7 @@ end
 EntityMemberSetters['eulerAngles'] = function(entt, rot)
   C('ev_object_setrotationeuler', entt, rot)
   local rb = ComponentGetters[Rigidbody](entt)
-  if rb.handle ~= nil then
+  if rb ~= nil and rb.handle ~= nil then
     rb:setRotation(rot)
   end
 end
