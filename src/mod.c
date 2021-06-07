@@ -1112,6 +1112,15 @@ ev_scene_getobject_wrapper(
   *out = ev_scene_getobject(NULL, *path);
 }
 
+void
+ev_object_getchild_wrapper(
+    GameObject *out,
+    GameObject *parent,
+    CONST_STR *name)
+{
+  *out = ev_object_getchild(NULL, *parent, *name);
+}
+
 void 
 ev_gamemod_scriptapi_loader(
     ScriptContextHandle ctx_h)
@@ -1128,6 +1137,7 @@ ev_gamemod_scriptapi_loader(
   });
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getname_wrapper, "ev_object_getname", constCharType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(ctx_h, ev_object_getchild_wrapper, "ev_object_getchild", ullSType, 2, (ScriptType[]){ullSType, constCharType});
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, _ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});

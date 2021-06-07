@@ -5,6 +5,10 @@ EntityMemberGetters['name'] = function(entt)
   return res
 end
 
+Entity.getChild = function(self,name)
+  return Entities[C('ev_object_getchild', self.entityID, name)]
+end
+
 EntityMemberGetters['position'] = function(entt)
   res = C('ev_object_getposition', entt)
   return Vec3:new(res.x, res.y, res.z)
