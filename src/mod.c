@@ -65,6 +65,19 @@ ev_scene_getecsworld(
     GameScene scene_handle);
 
 void
+ev_object_settransform(
+    GameScene scene_handle,
+    GameObject entt, 
+    Vec3 new_pos,
+    Vec4 new_rot,
+    Vec3 new_scale);
+
+void
+ev_scene_setactivecamera(
+    GameScene scene_handle,
+    GameObject camera);
+
+void
 ev_game_setactivescene(
     GameScene scene_handle)
 {
