@@ -614,7 +614,7 @@ worldtransform_update(
 
   GameObject parent = GameECS->getParent(scene.ecs_world, entt);
   if(parent != 0) {
-    Matrix4x4 *parent_worldtransform = _ev_object_getworldtransform(scene.ecs_world, parent);
+    Matrix4x4 *parent_worldtransform = _ev_object_getworldtransform(scene_handle, parent);
     glm_mat4_dup(*parent_worldtransform, *worldTransform);
   } else {
     glm_mat4_identity(*worldTransform);
