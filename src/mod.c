@@ -439,7 +439,7 @@ ev_game_progress(
   return result;
 }
 
-Matrix4x4 *
+const Matrix4x4 *
 _ev_object_getworldtransform(
     GameScene world,
     GameObject entt);
@@ -469,8 +469,12 @@ _ev_object_setrotation(
     Vec4 new_rot)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  tr->rotation = new_rot;
+  const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+      .position = tr->position,
+      .rotation = new_rot,
+      .scale = tr->scale
+  });
   transform_setdirty(scene.ecs_world, entt);
 }
 
@@ -500,8 +504,12 @@ _ev_object_setposition(
     Vec3 new_pos)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  tr->position = new_pos;
+  const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+      .position = new_pos,
+      .rotation = tr->rotation,
+      .scale = tr->scale
+  });
   transform_setdirty(scene.ecs_world, entt);
 }
 
@@ -514,11 +522,12 @@ ev_object_settransform(
     Vec3 new_scale)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  tr->position = new_pos;
-  tr->rotation = new_rot;
-  tr->scale = new_scale;
-
+  TransformComponent transform = {
+      .position = new_pos,
+      .rotation = new_rot,
+      .scale = new_scale
+  };
+  GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &transform);
   transform_setdirty(scene.ecs_world, entt);
 }
 
@@ -527,7 +536,7 @@ _ev_object_getrotationeuler(
     GameScene scene_handle,
     GameObject entt)
 {
-  Matrix4x4 *rotationMatrix = _ev_object_getworldtransform(scene_handle, entt);
+  const Matrix4x4 *rotationMatrix = _ev_object_getworldtransform(scene_handle, entt);
   Vec3 res;
   glm_euler_angles(*rotationMatrix, &res);
   return res;
@@ -540,11 +549,19 @@ _ev_object_setrotationeuler(
     Vec3 new_angles)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
 
+
+  Vec4 rot_quat;
   Matrix4x4 rotationMatrix;
   glm_euler(&new_angles, rotationMatrix);
-  glm_mat4_quat(rotationMatrix, &(tr->rotation));
+  glm_mat4_quat(rotationMatrix, &rot_quat);
+
+  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+      .position = tr->position,
+      .rotation = rot_quat,
+      .scale = tr->scale
+  });
 
   transform_setdirty(scene.ecs_world, entt);
 }
@@ -556,8 +573,12 @@ _ev_object_setscale(
     Vec3 new_scale)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  tr->scale = new_scale;
+  const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+      .position = tr->position,
+      .rotation = tr->rotation,
+      .scale = new_scale
+  });
   transform_setdirty(scene.ecs_world, entt);
 }
 
@@ -567,7 +588,7 @@ _ev_object_getrotation(
     GameObject entt)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  const TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
   return comp->rotation;
 }
 
@@ -586,7 +607,7 @@ _ev_object_getposition(
     GameObject entt)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  const TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
   return comp->position;
 }
 
@@ -596,7 +617,7 @@ _ev_object_getscale(
     GameObject entt)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  const TransformComponent *comp = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
   return comp->scale;
 }
 
@@ -610,25 +631,27 @@ worldtransform_update(
     return;
   }
 
-  WorldTransformComponent *worldTransform = GameECS->getComponent(scene.ecs_world, entt, WorldTransformComponentID);
+  WorldTransformComponent *worldTransform = GameECS->getComponentMut(scene.ecs_world, entt, WorldTransformComponentID);
 
   GameObject parent = GameECS->getParent(scene.ecs_world, entt);
   if(parent != 0) {
-    Matrix4x4 *parent_worldtransform = _ev_object_getworldtransform(scene_handle, parent);
+    const Matrix4x4 *parent_worldtransform = _ev_object_getworldtransform(scene_handle, parent);
     glm_mat4_dup(*parent_worldtransform, *worldTransform);
   } else {
     glm_mat4_identity(*worldTransform);
   }
 
-  TransformComponent *transform = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  const TransformComponent *transform = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
   glm_translate(*worldTransform, (float*)&transform->position);
   glm_quat_rotate(*worldTransform, (float*)&transform->rotation, *worldTransform);
   glm_scale(*worldTransform, (float*)&transform->scale);
 
+  GameECS->modified(scene.ecs_world, entt, WorldTransformComponentID);
+
   GameECS->removeTag(scene.ecs_world, entt, DirtyTransformTagID);
 }
 
-Matrix4x4 *
+const Matrix4x4 *
 _ev_object_getworldtransform(
     GameScene scene_handle,
     GameObject entt)
@@ -670,7 +693,7 @@ _ev_camera_sethfov(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  CameraComponent *comp = GameECS->getComponentMut(scene.ecs_world, camera, CameraComponentID);
   if(comp->hfov != hfov) {
     comp->hfov = hfov;
     GameECS->modified(scene.ecs_world, camera, CameraComponentID);
@@ -685,7 +708,7 @@ _ev_camera_setvfov(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  CameraComponent *comp = GameECS->getComponentMut(scene.ecs_world, camera, CameraComponentID);
   if(comp->vfov != vfov) {
     comp->vfov = vfov;
     GameECS->modified(scene.ecs_world, camera, CameraComponentID);
@@ -700,7 +723,7 @@ _ev_camera_setaspectratio(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  CameraComponent *comp = GameECS->getComponentMut(scene.ecs_world, camera, CameraComponentID);
   if(comp->aspectRatio != aspectRatio) {
     comp->aspectRatio = aspectRatio;
     GameECS->modified(scene.ecs_world, camera, CameraComponentID);
@@ -715,7 +738,7 @@ _ev_camera_setnearplane(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  CameraComponent *comp = GameECS->getComponentMut(scene.ecs_world, camera, CameraComponentID);
   if(comp->nearPlane != nearPlane) {
     comp->nearPlane = nearPlane;
     GameECS->modified(scene.ecs_world, camera, CameraComponentID);
@@ -730,7 +753,7 @@ _ev_camera_setfarplane(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  CameraComponent *comp = GameECS->getComponentMut(scene.ecs_world, camera, CameraComponentID);
   if(comp->farPlane != farPlane) {
     comp->farPlane = farPlane;
     GameECS->modified(scene.ecs_world, camera, CameraComponentID);
@@ -744,7 +767,7 @@ _ev_camera_getviewmat(
   Matrix4x4 outViewMat)
 {
   camera = camera?camera:GameData.scenes[scene_handle?scene_handle:GameData.activeScene].activeCamera;
-  Matrix4x4 *transform = _ev_object_getworldtransform(scene_handle, camera);
+  const Matrix4x4 *transform = _ev_object_getworldtransform(scene_handle, camera);
   glm_mat4_inv(*transform, outViewMat);
 }
 
@@ -756,7 +779,7 @@ _ev_camera_getprojectionmat(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
-  CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
+  const CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
   glm_mat4_dup(comp->projectionMatrix, outProjMat);
 }
 
@@ -767,14 +790,14 @@ _ev_object_setworldtransform(
     Matrix4x4 new_transform)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
-  WorldTransformComponent *world_transform = GameECS->getComponent(scene.ecs_world, entt, WorldTransformComponentID);
+  WorldTransformComponent *world_transform = GameECS->getComponentMut(scene.ecs_world, entt, WorldTransformComponentID);
   glm_mat4_copy(new_transform, *world_transform);
+  GameECS->modified(scene.ecs_world, entt, WorldTransformComponentID);
 
   GameECS->forEachChild(scene.ecs_world, entt, transform_setdirty);
-  ev_log_trace("World transform set for Entity { %llu } in GameScene { %llu }", entt, scene_handle);
 }
 
-PTR
+const PTR
 ev_object_getcomponent(
     GameScene scene_handle,
     GameObject entt,
@@ -782,6 +805,16 @@ ev_object_getcomponent(
 {
   ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene_handle);
   return GameECS->getComponent(ecs_world, entt, comp_id);
+}
+
+PTR
+ev_object_getcomponentmut(
+    GameScene scene_handle,
+    GameObject entt,
+    GameComponentID comp_id)
+{
+  ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene_handle);
+  return GameECS->getComponentMut(ecs_world, entt, comp_id);
 }
 
 bool
@@ -1054,6 +1087,7 @@ EV_BINDINGS
 
   // ECS shortcuts
   EV_NS_BIND_FN(Object, getComponent, ev_object_getcomponent);
+  EV_NS_BIND_FN(Object, getComponentMut, ev_object_getcomponentmut);
   EV_NS_BIND_FN(Object, hasComponent, ev_object_hascomponent);
   EV_NS_BIND_FN(Object, setComponent, ev_object_setcomponent);
   EV_NS_BIND_FN(Object, addComponent, ev_object_addcomponent);
