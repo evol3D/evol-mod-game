@@ -141,7 +141,7 @@ ev_sceneloader_loadtransformcomponent(
   size_t rot_id_len = evstring_len(rot_id);
   for(char i = 0; i < 3; i++) {
     rot_id[rot_id_len-2] = '0'+i;
-    ((float*)&rotation)[i] = (float)evjs_get(json,rot_id)->as_num;
+    ((float*)&rotation)[i] = glm_rad((float)evjs_get(json,rot_id)->as_num);
   }
 
   evstring scale_id = evstring_newfmt("%s.scale[x]", *comp_id);
