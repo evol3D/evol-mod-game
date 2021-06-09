@@ -84,6 +84,14 @@ ev_game_setactivescene(
   GameData.activeScene = scene_handle;
 }
 
+void
+ev_game_clearscenes()
+{
+  vec_clear(GameData.scenes);
+  Hashmap(evstring, GameScene).clear(GameData.scene_map);
+  GameData.activeScene = 0;
+}
+
 GameScene
 ev_scene_create()
 {
@@ -1014,6 +1022,7 @@ ev_scene_getfromname(
 
 EV_BINDINGS
 {
+  EV_NS_BIND_FN(Game, clearScenes, ev_game_clearscenes);
   EV_NS_BIND_FN(Game, setActiveScene, ev_game_setactivescene);
   EV_NS_BIND_FN(Game, progress, ev_game_progress);
 
