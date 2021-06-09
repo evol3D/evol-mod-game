@@ -36,6 +36,21 @@ EntityMemberSetters['eulerAngles'] = function(entt, rot)
   end
 end
 
+EntityMemberGetters['forward'] = function(entt)
+  res = C('ev_object_getforwardvec', entt)
+  return Vec3:new(res.x, res.y, res.z)
+end
+
+EntityMemberGetters['right'] = function(entt)
+  res = C('ev_object_getrightvec', entt)
+  return Vec3:new(res.x, res.y, res.z)
+end
+
+EntityMemberGetters['up'] = function(entt)
+  res = C('ev_object_getupvec', entt)
+  return Vec3:new(res.x, res.y, res.z)
+end
+
 function gotoScene(name)
   C('ev_game_setactivescenename', name)
 end

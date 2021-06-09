@@ -1038,6 +1038,39 @@ EV_DESTRUCTOR
   }
 }
 
+Vec3
+ev_object_getforwardvec(
+    GameScene scene_handle,
+    GameObject obj)
+{
+  Vec3 res;
+  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  glm_vec3_scale((*worldTransform)[2], -1, (float*)&res);
+  return res;
+}
+
+Vec3
+ev_object_getrightvec(
+    GameScene scene_handle,
+    GameObject obj)
+{
+  Vec3 res;
+  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  res = *(Vec3*)((*worldTransform)[0]);
+  return res;
+}
+
+Vec3
+ev_object_getupvec(
+    GameScene scene_handle,
+    GameObject obj)
+{
+  Vec3 res;
+  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  res = *(Vec3*)((*worldTransform)[1]);
+  return res;
+}
+
 void
 ev_scene_setname(
     GameScene scene_handle,
@@ -1178,6 +1211,39 @@ ev_object_getchild_wrapper(
   *out = ev_object_getchild(NULL, *parent, *name);
 }
 
+void
+ev_object_getforwardvec_wrapper(
+    EV_UNALIGNED Vec3 *out,
+    EV_UNALIGNED ECSEntityID *entt)
+{
+  Vec3 res = ev_object_getforwardvec(NULL, *entt);
+  out->x = res.x;
+  out->y = res.y;
+  out->z = res.z;
+}
+
+void
+ev_object_getrightvec_wrapper(
+    EV_UNALIGNED Vec3 *out,
+    EV_UNALIGNED ECSEntityID *entt)
+{
+  Vec3 res = ev_object_getrightvec(NULL, *entt);
+  out->x = res.x;
+  out->y = res.y;
+  out->z = res.z;
+}
+
+void
+ev_object_getupvec_wrapper(
+    EV_UNALIGNED Vec3 *out,
+    EV_UNALIGNED ECSEntityID *entt)
+{
+  Vec3 res = ev_object_getupvec(NULL, *entt);
+  out->x = res.x;
+  out->y = res.y;
+  out->z = res.z;
+}
+
 void 
 ev_gamemod_scriptapi_loader(
     EVNS_ScriptInterface *ScriptInterface,
@@ -1199,6 +1265,10 @@ ev_gamemod_scriptapi_loader(
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, _ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
+
+  ScriptInterface->addFunction(ctx_h, ev_object_getforwardvec_wrapper, "ev_object_getforwardvec", vec3SType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(ctx_h, ev_object_getrightvec_wrapper, "ev_object_getrightvec", vec3SType, 1, (ScriptType[]){ullSType});
+  ScriptInterface->addFunction(ctx_h, ev_object_getupvec_wrapper, "ev_object_getupvec", vec3SType, 1, (ScriptType[]){ullSType});
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getrotationeuler_wrapper, "ev_object_getrotationeuler", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, _ev_object_setrotationeuler_wrapper, "ev_object_setrotationeuler", voidSType, 2, (ScriptType[]){ullSType, vec3SType});
