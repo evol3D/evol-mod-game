@@ -22,6 +22,10 @@ EntityMemberSetters['position'] = function(entt, pos)
   end
 end
 
+EntityMemberGetters['worldPosition'] = function(entt)
+  res = C('ev_object_getworldposition', entt)
+  return Vec3:new(res.x, res.y, res.z)
+end
 
 EntityMemberGetters['eulerAngles'] = function(entt)
   error('Attempt to read Entity.eulerAngles (Write-Only Parameter)')
