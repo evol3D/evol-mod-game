@@ -11,6 +11,8 @@
 #define IMPORT_MODULE evmod_script
 #include <evol/meta/module_import.h>
 #define IMPORT_MODULE evmod_assets
+#include <evol/meta/module_import.h>
+#define IMPORT_MODULE evmod_renderer
 #include IMPORT_MODULE_H
 
 #include <evjson.h>
@@ -40,6 +42,7 @@ struct evGameData {
   evolmodule_t physics_module;
   evolmodule_t script_module;
   evolmodule_t asset_module;
+  evolmodule_t renderer_module;
   vec(GameSceneStruct) scenes;
   Map(evstring, GameScene) scene_map;
   GameScene activeScene;
@@ -326,6 +329,16 @@ ev_sceneloader_loadrigidbodycomponent(
   evstring_free(CapsuleCollisionShapeSTR);
 }
 
+void
+ev_sceneloader_loadrendercomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  UNIMPLEMENTED();
+}
+
 GameObject
 ev_scene_createobject(
     GameScene scene_handle);
@@ -341,6 +354,7 @@ ev_sceneloader_loadnode(
   evstring RigidbodyComponentSTR = evstring_new("RigidbodyComponent");
   evstring ScriptComponentSTR = evstring_new("ScriptComponent");
   evstring CameraComponentSTR = evstring_new("CameraComponent");
+  evstring RenderComponentSTR = evstring_new("RenderComponent");
   ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene);
 
   GameObject obj;
@@ -373,6 +387,8 @@ ev_sceneloader_loadnode(
         ev_sceneloader_loadrigidbodycomponent(scene, obj, json, &component_id);
       } else if(!evstring_cmp(component_type, CameraComponentSTR)) {
         ev_sceneloader_loadcameracomponent(scene, obj, json, &component_id);
+      } else if(!evstring_cmp(component_type, RenderComponentSTR)) {
+        ev_sceneloader_loadrendercomponent(scene, obj, json, &component_id);
       }
 
 
@@ -417,6 +433,14 @@ ev_scene_loadfromfile(
     evstring node_id = evstring_newfmt("nodes[%d]", i);
     ev_sceneloader_loadnode(newscene, scene_desc, &node_id, 0);
     evstring_free(node_id);
+  }
+
+  if (evjs_get(scene_desc, "pipelines")) {
+    GraphicsPipeline->readJSONList(scene_desc, "pipelines");
+  }
+
+  if (evjs_get(scene_desc, "materials")) {
+    Material->readJSONList(scene_desc, "materials");
   }
 
   evstring activeCamera = evstring_refclone(evjs_get(scene_desc, "activeCamera")->as_str);
@@ -1006,6 +1030,11 @@ EV_CONSTRUCTOR
     imports(GameData.physics_module, (PhysicsWorld, CollisionShape, Rigidbody));
   }
 
+  GameData.renderer_module = evol_loadmodule("renderer");
+  if(GameData.renderer_module) {
+    imports(GameData.renderer_module, (Material, GraphicsPipeline));
+  }
+
   GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
   GameData.scene_map = Hashmap(evstring, GameScene).new();
   vec_setlen((vec_t*)&GameData.scenes, 1);
@@ -1035,6 +1064,10 @@ EV_DESTRUCTOR
 
   if(GameData.script_module) {
     evol_unloadmodule(GameData.script_module);
+  }
+
+  if(GameData.renderer_module) {
+    evol_unloadmodule(GameData.renderer_module);
   }
 }
 
