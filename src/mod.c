@@ -27,6 +27,10 @@ typedef struct {
   GameObject activeCamera;
 } GameSceneStruct;
 
+struct {
+  GameComponentID RenderingComponentID;
+} RenderingData;
+
 void
 gamescenestruct_destr(
     void *data)
@@ -74,6 +78,13 @@ ev_object_settransform(
     Vec3 new_pos,
     Vec4 new_rot,
     Vec3 new_scale);
+
+void
+ev_object_setcomponent(
+    GameScene scene_handle,
+    GameObject entt,
+    GameComponentID comp_id,
+    PTR data);
 
 void
 ev_scene_setactivecamera(
@@ -336,7 +347,20 @@ ev_sceneloader_loadrendercomponent(
     evjson_t *json,
     evstring *comp_id)
 {
-  UNIMPLEMENTED();
+  evstring meshPath_jsonid = evstring_newfmt("%s.mesh", *comp_id);
+  evstring materialName_jsonid = evstring_newfmt("%s.material", *comp_id);
+
+  evstring meshPath = evstring_refclone(evjs_get(json, meshPath_jsonid)->as_str);
+  evstring materialName = evstring_refclone(evjs_get(json, materialName_jsonid)->as_str);
+
+  RenderComponent newRenderComponent = Renderer->registerComponent(meshPath, materialName);
+  ev_object_setcomponent(scene, obj, RenderingData.RenderingComponentID, &newRenderComponent);
+
+  evstring_free(meshPath);
+  evstring_free(materialName);
+
+  evstring_free(meshPath_jsonid);
+  evstring_free(materialName_jsonid);
 }
 
 GameObject
@@ -428,19 +452,19 @@ ev_scene_loadfromfile(
   JSONAsset scene_jsonasset = JSONLoader->loadAsset(scenefile_handle);
   evjson_t *scene_desc = (evjson_t*)scene_jsonasset.json_data;
 
-  int nodes_count = (int)evjs_get(scene_desc, "nodes.len")->as_num;
-  for(int i = 0; i < nodes_count; i++) {
-    evstring node_id = evstring_newfmt("nodes[%d]", i);
-    ev_sceneloader_loadnode(newscene, scene_desc, &node_id, 0);
-    evstring_free(node_id);
-  }
-
   if (evjs_get(scene_desc, "pipelines")) {
     GraphicsPipeline->readJSONList(scene_desc, "pipelines");
   }
 
   if (evjs_get(scene_desc, "materials")) {
     Material->readJSONList(scene_desc, "materials");
+  }
+
+  int nodes_count = (int)evjs_get(scene_desc, "nodes.len")->as_num;
+  for(int i = 0; i < nodes_count; i++) {
+    evstring node_id = evstring_newfmt("nodes[%d]", i);
+    ev_sceneloader_loadnode(newscene, scene_desc, &node_id, 0);
+    evstring_free(node_id);
   }
 
   evstring activeCamera = evstring_refclone(evjs_get(scene_desc, "activeCamera")->as_str);
@@ -457,8 +481,8 @@ ev_game_progress(
 {
   U32 result = 0;
 
-  result |= GameECS->progress(GameData.scenes[GameData.activeScene].ecs_world, deltaTime);
   result |= PhysicsWorld->progress(GameData.scenes[GameData.activeScene].physics_world, deltaTime);
+  result |= GameECS->progress(GameData.scenes[GameData.activeScene].ecs_world, deltaTime);
 
   return result;
 }
@@ -993,6 +1017,29 @@ ev_scene_createcamera(
   return camera;
 }
 
+void
+RendererPushObjectFrameData(
+    ECSQuery query)
+{
+  WorldTransformComponent *worldTransforms = ECS->getQueryColumn(query, sizeof(WorldTransformComponent), 1);
+  RenderComponent *renderComponents = ECS->getQueryColumn(query, sizeof(RenderComponent), 2);
+  U32 count = ECS->getQueryMatchCount(query);
+
+  Renderer->addFrameObjectData(renderComponents, worldTransforms, count);
+}
+
+void
+RendererObjectUpdateTransforms(
+    ECSQuery query)
+{
+  ECSEntityID *entities = ECS->getQueryEntities(query);
+  U32 count = ECS->getQueryMatchCount(query);
+
+  for(int i = 0; i < count; i++) {
+    worldtransform_update(NULL, entities[i]);
+  }
+}
+
 
 EV_CONSTRUCTOR 
 {
@@ -1011,6 +1058,11 @@ EV_CONSTRUCTOR
 
       GameECS->setOnAddTrigger("CameraComponentOnAddTrigger", CameraComponentName, CameraComponentOnAddTrigger);
       GameECS->setOnSetTrigger("CameraComponentOnSetTrigger", CameraComponentName, CameraComponentOnSetTrigger);
+
+      // Rendering ECS
+      RenderingData.RenderingComponentID = GameECS->registerComponent("RenderComponent", sizeof(RenderComponent), EV_ALIGNOF(RenderComponent));
+      GameECS->registerSystem("[out]WorldTransformComponent,RenderComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererObjectUpdateTransforms, "RendererObjectUpdateTransforms");
+      GameECS->registerSystem("[in]WorldTransformComponent,RenderComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererPushObjectFrameData, "RendererPushObjectFrameData");
     }
   }
 
@@ -1032,7 +1084,7 @@ EV_CONSTRUCTOR
 
   GameData.renderer_module = evol_loadmodule("renderer");
   if(GameData.renderer_module) {
-    imports(GameData.renderer_module, (Material, GraphicsPipeline));
+    imports(GameData.renderer_module, (Renderer, Material, GraphicsPipeline));
   }
 
   GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
