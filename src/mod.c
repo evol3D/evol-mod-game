@@ -70,6 +70,10 @@ ev_scene_getphysicsworld(
 ECSGameWorldHandle
 ev_scene_getecsworld(
     GameScene scene_handle);
+void
+worldtransform_update(
+    GameScene scene_handle,
+    GameObject entt);
 
 void
 ev_object_settransform(
@@ -367,7 +371,33 @@ GameObject
 ev_scene_createobject(
     GameScene scene_handle);
 
-void
+GameObject
+ev_sceneloader_loadnode(
+    GameScene scene,
+    evjson_t *json,
+    evstring *id,
+    GameObject parent);
+
+GameObject
+ev_sceneloader_loadprefab(
+    GameScene scene,
+    CONST_STR prefabPath)
+{
+  AssetHandle prefabAsset = Asset->load(prefabPath);
+  JSONAsset prefabData = JSONLoader->loadAsset(prefabAsset);
+
+  GameObject node = ev_sceneloader_loadnode(scene, prefabData.json_data, NULL, 0);
+
+  Asset->free(prefabAsset);
+  /* ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene); */
+  /* GameECS->deferEnd(ecs_world); */
+  /* GameECS->mergeWorld(ecs_world); */
+  /* GameECS->deferBegin(ecs_world); */
+
+  return node;
+}
+
+GameObject
 ev_sceneloader_loadnode(
     GameScene scene,
     evjson_t *json,
@@ -387,50 +417,63 @@ ev_sceneloader_loadnode(
   } else {
     obj = ev_scene_createchildobject(scene, parent);
   }
-  evstring nodename_id = evstring_newfmt("%s.id", *id);
-  evstring nodename = evstring_refclone(evjs_get(json, nodename_id)->as_str);
-  GameECS->setEntityName(ecs_world, obj, nodename);
-  evstring_free(nodename);
-  evstring_free(nodename_id);
 
-  EV_DEFER(
-      evstring components_count_id = evstring_newfmt("%s.components.len", *id),
-      evstring_free(components_count_id))
-  {
-    int components_count = (int)evjs_get(json, components_count_id)->as_num;
-    for(int i = 0; i < components_count; i++) {
-      evstring component_id = evstring_newfmt("%s.components[%d]", *id, i);
-      evstring component_type_id = evstring_newfmt("%s.type", component_id);
-      evstring component_type = evstring_refclone(evjs_get(json, component_type_id)->as_str);
-
-      if(!evstring_cmp(component_type, TransformComponentSTR)) {
-        ev_sceneloader_loadtransformcomponent(scene, obj, json, &component_id);
-      } else if(!evstring_cmp(component_type, ScriptComponentSTR)) {
-        ev_sceneloader_loadscriptcomponent(scene, obj, json, &component_id);
-      } else if(!evstring_cmp(component_type, RigidbodyComponentSTR)) {
-        ev_sceneloader_loadrigidbodycomponent(scene, obj, json, &component_id);
-      } else if(!evstring_cmp(component_type, CameraComponentSTR)) {
-        ev_sceneloader_loadcameracomponent(scene, obj, json, &component_id);
-      } else if(!evstring_cmp(component_type, RenderComponentSTR)) {
-        ev_sceneloader_loadrendercomponent(scene, obj, json, &component_id);
-      }
-
-
-      evstring_free(component_type);
-      evstring_free(component_type_id);
-      evstring_free(component_id);
-    }
+  evstring prefix;
+  if(id) {
+    prefix = evstring_clone(*id);
+    evstring_pushchar(&prefix, '.');
+  } else {
+    prefix = evstring_new("");
   }
 
+  evstring nodename_id = evstring_newfmt("%sid", prefix);
+  evjson_entry *nodename_entry = evjs_get(json, nodename_id);
+  if(nodename_entry) {
+    evstring nodename = evstring_refclone(nodename_entry->as_str);
+    GameECS->setEntityName(ecs_world, obj, nodename);
+    evstring_free(nodename);
+  }
+  evstring_free(nodename_id);
+
+  evstring components_id = evstring_newfmt("%scomponents", prefix);
+  evstring components_count_id = evstring_newfmt("%s.len", components_id);
+
+  int components_count = (int)evjs_get(json, components_count_id)->as_num;
+  for(int i = 0; i < components_count; i++) {
+    evstring component_id = evstring_newfmt("%s[%d]", components_id, i);
+    evstring component_type_id = evstring_newfmt("%s.type", component_id);
+    evstring component_type = evstring_refclone(evjs_get(json, component_type_id)->as_str);
+
+    if(!evstring_cmp(component_type, TransformComponentSTR)) {
+      ev_sceneloader_loadtransformcomponent(scene, obj, json, &component_id);
+    } else if(!evstring_cmp(component_type, ScriptComponentSTR)) {
+      ev_sceneloader_loadscriptcomponent(scene, obj, json, &component_id);
+    } else if(!evstring_cmp(component_type, RigidbodyComponentSTR)) {
+      ev_sceneloader_loadrigidbodycomponent(scene, obj, json, &component_id);
+    } else if(!evstring_cmp(component_type, CameraComponentSTR)) {
+      ev_sceneloader_loadcameracomponent(scene, obj, json, &component_id);
+    } else if(!evstring_cmp(component_type, RenderComponentSTR)) {
+      ev_sceneloader_loadrendercomponent(scene, obj, json, &component_id);
+    }
+
+
+    evstring_free(component_type);
+    evstring_free(component_type_id);
+    evstring_free(component_id);
+  }
+
+  evstring_free(components_count_id);
+  evstring_free(components_id);
+
   EV_DEFER(
-      evstring children_count_id = evstring_newfmt("%s.children.len", *id),
+      evstring children_count_id = evstring_newfmt("%schildren.len", prefix),
       evstring_free(children_count_id))
   {
     evjson_entry *children_count_res = evjs_get(json, children_count_id);
     if(children_count_res) {
       int children_count = (int)children_count_res->as_num;
       for(int i = 0; i < children_count; i++) {
-        evstring child_id = evstring_newfmt("%s.children[%d]", *id, i);
+        evstring child_id = evstring_newfmt("%schildren[%d]", prefix, i);
         ev_sceneloader_loadnode(scene, json, &child_id, obj);
         evstring_free(child_id);
       }
@@ -441,6 +484,8 @@ ev_sceneloader_loadnode(
   evstring_free(CameraComponentSTR);
   evstring_free(RigidbodyComponentSTR);
   evstring_free(ScriptComponentSTR);
+
+  return obj;
 }
 
 GameScene
@@ -576,7 +621,9 @@ ev_object_settransform(
       .scale = new_scale
   };
   GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &transform);
+  GameECS->addComponent(scene.ecs_world, entt, WorldTransformComponentID);
   transform_setdirty(scene.ecs_world, entt);
+  worldtransform_update(scene_handle, entt);
 }
 
 Vec3
@@ -1299,6 +1346,14 @@ ev_scene_getobject_wrapper(
 }
 
 void
+ev_sceneloader_loadprefab_wrapper(
+    GameObject *out,
+    CONST_STR *prefabPath)
+{
+  *out = ev_sceneloader_loadprefab(NULL, *prefabPath);
+}
+
+void
 ev_object_getchild_wrapper(
     GameObject *out,
     GameObject *parent,
@@ -1366,6 +1421,8 @@ ev_gamemod_scriptapi_loader(
       {"y", floatSType, offsetof(Vec3, y)},
       {"z", floatSType, offsetof(Vec3, z)}
   });
+
+  ScriptInterface->addFunction(ctx_h, ev_sceneloader_loadprefab_wrapper, "ev_sceneloader_loadprefab", ullSType, 1, (ScriptType[]){constCharType});
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getname_wrapper, "ev_object_getname", constCharType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, ev_object_getchild_wrapper, "ev_object_getchild", ullSType, 2, (ScriptType[]){ullSType, constCharType});

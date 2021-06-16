@@ -62,3 +62,7 @@ end
 function getObject(path)
   return Entities[C('ev_scene_getobject', path)]
 end
+
+function loadPrefab(path)
+  return Entities[C('ev_sceneloader_loadprefab', path)]
+end
