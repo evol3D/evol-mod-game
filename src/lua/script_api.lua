@@ -64,5 +64,9 @@ function getObject(path)
 end
 
 function loadPrefab(path)
-  return Entities[C('ev_sceneloader_loadprefab', path)]
+  -- Storing this as this operation will change what this points to
+  old_this = this
+  prefab = Entities[C('ev_sceneloader_loadprefab', path)]
+  this = old_this
+  return prefab
 end
