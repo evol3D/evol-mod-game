@@ -389,10 +389,6 @@ ev_sceneloader_loadprefab(
   GameObject node = ev_sceneloader_loadnode(scene, prefabData.json_data, NULL, 0);
 
   Asset->free(prefabAsset);
-  /* ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene); */
-  /* GameECS->deferEnd(ecs_world); */
-  /* GameECS->mergeWorld(ecs_world); */
-  /* GameECS->deferBegin(ecs_world); */
 
   return node;
 }
@@ -527,6 +523,7 @@ ev_game_progress(
   U32 result = 0;
 
   result |= PhysicsWorld->progress(GameData.scenes[GameData.activeScene].physics_world, deltaTime);
+  result |= Script->progress(deltaTime);
   result |= GameECS->progress(GameData.scenes[GameData.activeScene].ecs_world, deltaTime);
 
   return result;
@@ -598,7 +595,7 @@ _ev_object_setposition(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+  GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
       .position = new_pos,
       .rotation = tr->rotation,
       .scale = tr->scale
@@ -621,7 +618,8 @@ ev_object_settransform(
       .scale = new_scale
   };
   GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &transform);
-  GameECS->addComponent(scene.ecs_world, entt, WorldTransformComponentID);
+  WorldTransformComponent wt;
+  GameECS->setComponent(scene.ecs_world, entt, WorldTransformComponentID, &wt);
   transform_setdirty(scene.ecs_world, entt);
   worldtransform_update(scene_handle, entt);
 }
@@ -652,7 +650,7 @@ _ev_object_setrotationeuler(
   glm_euler((float*)&new_angles, rotationMatrix);
   glm_mat4_quat(rotationMatrix, (float*)&rot_quat);
 
-  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+  GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
       .position = tr->position,
       .rotation = rot_quat,
       .scale = tr->scale
@@ -669,7 +667,7 @@ _ev_object_setscale(
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   const TransformComponent *tr = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
+  GameECS->setComponent(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
       .position = tr->position,
       .rotation = tr->rotation,
       .scale = new_scale
@@ -726,22 +724,22 @@ worldtransform_update(
     return;
   }
 
-  WorldTransformComponent *worldTransform = GameECS->getComponentMut(scene.ecs_world, entt, WorldTransformComponentID);
+  WorldTransformComponent worldTransform = {0};
 
   GameObject parent = GameECS->getParent(scene.ecs_world, entt);
   if(parent != 0) {
     const Matrix4x4 *parent_worldtransform = _ev_object_getworldtransform(scene_handle, parent);
-    glm_mat4_dup(*parent_worldtransform, *worldTransform);
+    glm_mat4_dup((vec4*)*parent_worldtransform, worldTransform);
   } else {
-    glm_mat4_identity(*worldTransform);
+    glm_mat4_identity(worldTransform);
   }
 
-  const TransformComponent *transform = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
-  glm_translate(*worldTransform, (float*)&transform->position);
-  glm_quat_rotate(*worldTransform, (float*)&transform->rotation, *worldTransform);
-  glm_scale(*worldTransform, (float*)&transform->scale);
+  TransformComponent *transform = GameECS->getComponent(scene.ecs_world, entt, TransformComponentID);
+  glm_translate(worldTransform, (float*)&transform->position);
+  glm_quat_rotate(worldTransform, (float*)&transform->rotation, worldTransform);
+  glm_scale(worldTransform, (float*)&transform->scale);
 
-  GameECS->modified(scene.ecs_world, entt, WorldTransformComponentID);
+  GameECS->setComponent(scene.ecs_world, entt, WorldTransformComponentID, &worldTransform);
 
   GameECS->removeTag(scene.ecs_world, entt, DirtyTransformTagID);
 }
