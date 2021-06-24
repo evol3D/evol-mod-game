@@ -17,7 +17,7 @@
 
 #include <evjson.h>
 
-HashmapDefine(evstring, GameScene, evstring_free, NULL);
+HashmapDefine(evstring, GameScene, evstring_free, NULL)
 
 typedef struct {
   ECSGameWorldHandle ecs_world;
@@ -127,7 +127,7 @@ ev_scene_create()
       newscene.activeCamera,
       newscene.script_context);
 
-  GameScene newscene_handle = vec_push(&GameData.scenes, &newscene);
+  GameScene newscene_handle = vec_push((vec_t*)&GameData.scenes, &newscene);
   ev_log_trace("New scene given handle { %llu }", newscene_handle);
   if(GameData.activeScene == 0) {
     GameData.activeScene = newscene_handle;
@@ -150,21 +150,21 @@ ev_sceneloader_loadtransformcomponent(
 
   evstring pos_id = evstring_newfmt("%s.position[x]", *comp_id);
   size_t pos_id_len = evstring_len(pos_id);
-  for(char i = 0; i < 3; i++) {
+  for(size_t i = 0; i < 3; i++) {
     pos_id[pos_id_len-2] = '0' + i;
     ((float*)&position)[i] = (float)evjs_get(json, pos_id)->as_num;
   }
 
   evstring rot_id = evstring_newfmt("%s.rotation[x]", *comp_id);
   size_t rot_id_len = evstring_len(rot_id);
-  for(char i = 0; i < 3; i++) {
+  for(size_t i = 0; i < 3; i++) {
     rot_id[rot_id_len-2] = '0'+i;
     ((float*)&rotation)[i] = glm_rad((float)evjs_get(json,rot_id)->as_num);
   }
 
   evstring scale_id = evstring_newfmt("%s.scale[x]", *comp_id);
   size_t scale_id_len = evstring_len(scale_id);
-  for(char i = 0; i < 3; i++) {
+  for(size_t i = 0; i < 3; i++) {
     scale_id[scale_id_len-2] = '0'+i;
     ((float*)&scale)[i] = (float)evjs_get(json,scale_id)->as_num;
   }
@@ -176,8 +176,8 @@ ev_sceneloader_loadtransformcomponent(
   // Build rotation quaternion from loaded euler angles
   Vec4 rot_quat;
   Matrix4x4 rotationMatrix;
-  glm_euler(&rotation, rotationMatrix);
-  glm_mat4_quat(rotationMatrix, &rot_quat);
+  glm_euler((float*)&rotation, rotationMatrix);
+  glm_mat4_quat(rotationMatrix, (float*)&rot_quat);
 
   ev_object_settransform(scene, obj, position, rot_quat, scale);
 }
@@ -302,7 +302,7 @@ ev_sceneloader_loadrigidbodycomponent(
   evstring collisionshapetype = evstring_refclone(evjs_get(json, collisionshapetype_id)->as_str);
 
   PhysicsWorldHandle physWorld = ev_scene_getphysicsworld(scene);
-  CollisionShapeHandle collShapeHandle;
+  CollisionShapeHandle collShapeHandle = NULL;
   if(!evstring_cmp(collisionshapetype, SphereCollisionShapeSTR)) {
     evstring radius_id = evstring_newfmt("%s.collisionShape.radius", *comp_id);
     F32 radius = (F32)evjs_get(json, radius_id)->as_num;
@@ -312,7 +312,7 @@ ev_sceneloader_loadrigidbodycomponent(
     Vec3 halfExtents;
     evstring halfextents_id = evstring_newfmt("%s.collisionShape.halfExtents[x]", *comp_id);
     size_t halfextents_id_len = evstring_len(halfextents_id);
-    for(char i = 0; i < 3; i++) {
+    for(size_t i = 0; i < 3; i++) {
       halfextents_id[halfextents_id_len-2] = '0' + i;
       ((float*)&halfExtents)[i] = (float)evjs_get(json, halfextents_id)->as_num;
     }
@@ -633,7 +633,7 @@ _ev_object_getrotationeuler(
 {
   const Matrix4x4 *rotationMatrix = _ev_object_getworldtransform(scene_handle, entt);
   Vec3 res;
-  glm_euler_angles(*rotationMatrix, &res);
+  glm_euler_angles((vec4*)*rotationMatrix, (float*)&res);
   return res;
 }
 
@@ -649,8 +649,8 @@ _ev_object_setrotationeuler(
 
   Vec4 rot_quat;
   Matrix4x4 rotationMatrix;
-  glm_euler(&new_angles, rotationMatrix);
-  glm_mat4_quat(rotationMatrix, &rot_quat);
+  glm_euler((float*)&new_angles, rotationMatrix);
+  glm_mat4_quat(rotationMatrix, (float*)&rot_quat);
 
   GameECS->setComponentRaw(scene.ecs_world, entt, TransformComponentID, &(TransformComponent) {
       .position = tr->position,
@@ -863,7 +863,7 @@ _ev_camera_getviewmat(
 {
   camera = camera?camera:GameData.scenes[scene_handle?scene_handle:GameData.activeScene].activeCamera;
   const Matrix4x4 *transform = _ev_object_getworldtransform(scene_handle, camera);
-  glm_mat4_inv(*transform, outViewMat);
+  glm_mat4_inv((vec4*)*transform, outViewMat);
 }
 
 void
@@ -875,7 +875,7 @@ _ev_camera_getprojectionmat(
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   camera = camera?camera:scene.activeCamera;
   const CameraComponent *comp = GameECS->getComponent(scene.ecs_world, camera, CameraComponentID);
-  glm_mat4_dup(comp->projectionMatrix, outProjMat);
+  glm_mat4_dup((vec4*)comp->projectionMatrix, outProjMat);
 }
 
 void
@@ -966,7 +966,7 @@ CameraComponentOnSetTrigger(ECSQuery query)
   CameraComponent *cameraComp = ECS->getQueryColumn(query, sizeof(CameraComponent), 1);
   U32 count = ECS->getQueryMatchCount(query);
 
-  for(int i = 0; i < count; i++) {
+  for(U32 i = 0; i < count; i++) {
     if(cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_PERSPECTIVE) {
       glm_perspective(glm_rad(cameraComp[i].hfov), cameraComp[i].aspectRatio, cameraComp[i].nearPlane, cameraComp[i].farPlane, cameraComp[i].projectionMatrix);
     } else if (cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_ORTHOGRAPHIC){
@@ -1082,8 +1082,8 @@ RendererObjectUpdateTransforms(
   ECSEntityID *entities = ECS->getQueryEntities(query);
   U32 count = ECS->getQueryMatchCount(query);
 
-  for(int i = 0; i < count; i++) {
-    worldtransform_update(NULL, entities[i]);
+  for(U32 i = 0; i < count; i++) {
+    worldtransform_update(0, entities[i]);
   }
 }
 
@@ -1142,6 +1142,8 @@ EV_CONSTRUCTOR
     .script_context = ScriptContext->invalidHandle()
   };
   GameData.activeScene = 0;
+
+  return 0;
 }
 
 EV_DESTRUCTOR 
@@ -1168,6 +1170,8 @@ EV_DESTRUCTOR
   if(GameData.renderer_module) {
     evol_unloadmodule(GameData.renderer_module);
   }
+
+  return 0;
 }
 
 Vec3
@@ -1176,7 +1180,7 @@ ev_object_getworldposition(
     GameObject obj)
 {
   Vec3 res;
-  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  const Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
   res = *(Vec3*)((*worldTransform)[3]);
   return res;
 }
@@ -1187,8 +1191,9 @@ ev_object_getforwardvec(
     GameObject obj)
 {
   Vec3 res;
-  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
-  glm_vec3_scale((*worldTransform)[2], -1, (float*)&res);
+  const Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  float *backward = (float*)(*worldTransform)[2];
+  glm_vec3_scale(backward, -1, (float*)&res);
   return res;
 }
 
@@ -1198,7 +1203,7 @@ ev_object_getrightvec(
     GameObject obj)
 {
   Vec3 res;
-  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  const Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
   res = *(Vec3*)((*worldTransform)[0]);
   return res;
 }
@@ -1209,7 +1214,7 @@ ev_object_getupvec(
     GameObject obj)
 {
   Vec3 res;
-  Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
+  const Matrix4x4 *worldTransform = _ev_object_getworldtransform(scene_handle, obj);
   res = *(Vec3*)((*worldTransform)[1]);
   return res;
 }
@@ -1283,7 +1288,7 @@ _ev_object_getname_wrapper(
     EV_UNALIGNED CONST_STR *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  *out = ev_object_getname(NULL, *entt);
+  *out = ev_object_getname(0, *entt);
 }
 
 void
@@ -1291,7 +1296,7 @@ _ev_object_getposition_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = _ev_object_getposition(NULL, *entt);
+  Vec3 res = _ev_object_getposition(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
@@ -1302,7 +1307,7 @@ _ev_object_setposition_wrapper(
     EV_UNALIGNED ECSEntityID *entt,
     EV_UNALIGNED Vec3 *new_pos)
 {
-  _ev_object_setposition(NULL, *entt, Vec3new(
+  _ev_object_setposition(0, *entt, Vec3new(
         new_pos->x, 
         new_pos->y, 
         new_pos->z));
@@ -1313,7 +1318,7 @@ _ev_object_setrotationeuler_wrapper(
     EV_UNALIGNED ECSEntityID *entt,
     EV_UNALIGNED Vec3 *new_rot)
 {
-  _ev_object_setrotationeuler(NULL, *entt, Vec3new(
+  _ev_object_setrotationeuler(0, *entt, Vec3new(
         new_rot->x,
         new_rot->y,
         new_rot->z));
@@ -1324,7 +1329,7 @@ _ev_object_getrotationeuler_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = _ev_object_getrotationeuler(NULL, *entt);
+  Vec3 res = _ev_object_getrotationeuler(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
@@ -1342,7 +1347,7 @@ ev_scene_getobject_wrapper(
     GameObject *out,
     CONST_STR *path)
 {
-  *out = ev_scene_getobject(NULL, *path);
+  *out = ev_scene_getobject(0, *path);
 }
 
 void
@@ -1350,7 +1355,7 @@ ev_sceneloader_loadprefab_wrapper(
     GameObject *out,
     CONST_STR *prefabPath)
 {
-  *out = ev_sceneloader_loadprefab(NULL, *prefabPath);
+  *out = ev_sceneloader_loadprefab(0, *prefabPath);
 }
 
 void
@@ -1359,7 +1364,7 @@ ev_object_getchild_wrapper(
     GameObject *parent,
     CONST_STR *name)
 {
-  *out = ev_object_getchild(NULL, *parent, *name);
+  *out = ev_object_getchild(0, *parent, *name);
 }
 
 void
@@ -1367,7 +1372,7 @@ ev_object_getforwardvec_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = ev_object_getforwardvec(NULL, *entt);
+  Vec3 res = ev_object_getforwardvec(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
@@ -1378,7 +1383,7 @@ ev_object_getrightvec_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = ev_object_getrightvec(NULL, *entt);
+  Vec3 res = ev_object_getrightvec(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
@@ -1389,7 +1394,7 @@ ev_object_getupvec_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = ev_object_getupvec(NULL, *entt);
+  Vec3 res = ev_object_getupvec(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
@@ -1400,7 +1405,7 @@ ev_object_getworldposition_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
 {
-  Vec3 res = ev_object_getworldposition(NULL, *entt);
+  Vec3 res = ev_object_getworldposition(0, *entt);
   out->x = res.x;
   out->y = res.y;
   out->z = res.z;
