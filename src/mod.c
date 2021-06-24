@@ -264,6 +264,7 @@ ev_sceneloader_loadrigidbodycomponent(
   evstring SphereCollisionShapeSTR = evstring_new("Sphere");
   evstring BoxCollisionShapeSTR = evstring_new("Box");
   evstring CapsuleCollisionShapeSTR = evstring_new("Capsule");
+  evstring MeshCollisionShapeSTR = evstring_new("Mesh");
 
   RigidbodyInfo info;
 
@@ -330,6 +331,14 @@ ev_sceneloader_loadrigidbodycomponent(
 
     evstring_free(radius_id);
     evstring_free(height_id);
+  } else if(!evstring_cmp(collisionshapetype, MeshCollisionShapeSTR)) {
+    evstring meshpath_id = evstring_newfmt("%s.collisionShape.meshPath", *comp_id);
+    evstring meshpath = evstring_refclone(evjs_get(json, meshpath_id)->as_str);
+
+    collShapeHandle = CollisionShape->newMesh(physWorld, meshpath);
+
+    evstring_free(meshpath);
+    evstring_free(meshpath_id);
   }
 
   info.collisionShape = collShapeHandle;
@@ -339,6 +348,7 @@ ev_sceneloader_loadrigidbodycomponent(
   evstring_free(collisionshapetype);
   evstring_free(collisionshapetype_id);
 
+  evstring_free(MeshCollisionShapeSTR);
   evstring_free(SphereCollisionShapeSTR);
   evstring_free(BoxCollisionShapeSTR);
   evstring_free(CapsuleCollisionShapeSTR);
