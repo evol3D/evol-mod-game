@@ -993,6 +993,10 @@ CameraComponentOnSetTrigger(ECSQuery query)
   for(U32 i = 0; i < count; i++) {
     if(cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_PERSPECTIVE) {
       glm_perspective(glm_rad(cameraComp[i].hfov), cameraComp[i].aspectRatio, cameraComp[i].nearPlane, cameraComp[i].farPlane, cameraComp[i].projectionMatrix);
+
+      //Complience with vulkan coordinate system
+      cameraComp[i].projectionMatrix[1][1] *= -1;
+      
     } else if (cameraComp[i].viewType == EV_CAMERA_VIEWTYPE_ORTHOGRAPHIC){
       assert(!"Unimplemented: Orthographic Camera");
     } else {
