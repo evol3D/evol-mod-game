@@ -29,6 +29,7 @@ typedef struct {
 
 struct {
   GameComponentID RenderingComponentID;
+  GameComponentID LightComponentID;
 } RenderingData;
 
 void
@@ -78,7 +79,7 @@ worldtransform_update(
 void
 ev_object_settransform(
     GameScene scene_handle,
-    GameObject entt, 
+    GameObject entt,
     Vec3 new_pos,
     Vec4 new_rot,
     Vec3 new_scale);
@@ -377,6 +378,18 @@ ev_sceneloader_loadrendercomponent(
   evstring_free(materialName_jsonid);
 }
 
+void
+ev_sceneloader_loadlightcomponent(
+    GameScene scene,
+    GameObject obj,
+    evjson_t *json,
+    evstring *comp_id)
+{
+  ev_log_debug("a light was found!");
+  LightComponent newLightComponent = Light->registerComponent(json, *comp_id);
+  ev_object_setcomponent(scene, obj, RenderingData.LightComponentID, &newLightComponent);
+}
+
 GameObject
 ev_scene_createobject(
     GameScene scene_handle);
@@ -415,6 +428,7 @@ ev_sceneloader_loadnode(
   evstring ScriptComponentSTR = evstring_new("ScriptComponent");
   evstring CameraComponentSTR = evstring_new("CameraComponent");
   evstring RenderComponentSTR = evstring_new("RenderComponent");
+  evstring LightComponentSTR = evstring_new("LightComponent");
   ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene);
 
   GameObject obj;
@@ -460,8 +474,9 @@ ev_sceneloader_loadnode(
       ev_sceneloader_loadcameracomponent(scene, obj, json, &component_id);
     } else if(!evstring_cmp(component_type, RenderComponentSTR)) {
       ev_sceneloader_loadrendercomponent(scene, obj, json, &component_id);
-    }
-
+    } else if(!evstring_cmp(component_type, LightComponentSTR)) {
+     ev_sceneloader_loadlightcomponent(scene, obj, json, &component_id);
+   }
 
     evstring_free(component_type);
     evstring_free(component_type_id);
@@ -486,6 +501,7 @@ ev_sceneloader_loadnode(
     }
   }
 
+  evstring_free(LightComponentSTR);
   evstring_free(TransformComponentSTR);
   evstring_free(CameraComponentSTR);
   evstring_free(RigidbodyComponentSTR);
@@ -544,7 +560,7 @@ _ev_object_getworldtransform(
     GameScene world,
     GameObject entt);
 
-void 
+void
 ev_gamemod_scriptapi_loader(
     EVNS_ScriptInterface *ScriptInterface,
     ScriptContextHandle ctx_h);
@@ -565,7 +581,7 @@ transform_setdirty(
 void
 _ev_object_setrotation(
     GameScene scene_handle,
-    GameObject entt, 
+    GameObject entt,
     Vec4 new_rot)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
@@ -600,7 +616,7 @@ ev_object_getchild(
 void
 _ev_object_setposition(
     GameScene scene_handle,
-    GameObject entt, 
+    GameObject entt,
     Vec3 new_pos)
 {
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
@@ -616,7 +632,7 @@ _ev_object_setposition(
 void
 ev_object_settransform(
     GameScene scene_handle,
-    GameObject entt, 
+    GameObject entt,
     Vec3 new_pos,
     Vec4 new_rot,
     Vec3 new_scale)
@@ -961,7 +977,7 @@ ev_object_setcomponent(
   GameECS->setComponent(ecs_world, entt, comp_id, data);
 }
 
-void 
+void
 CameraComponentOnAddTrigger(ECSQuery query)
 {
   CameraComponent *cameraComp = ECS->getQueryColumn(query, sizeof(CameraComponent), 1);
@@ -993,7 +1009,7 @@ ev_scene_createobject(
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   GameObject object = GameECS->createEntity(scene.ecs_world);
 
-  ev_object_settransform(scene_handle, object, 
+  ev_object_settransform(scene_handle, object,
     Vec3new(0, 0, 0),     // Position
     Vec4new(0, 0, 0, 1),  // Rotation
     Vec3new(1, 1, 1)      // Scale
@@ -1010,7 +1026,7 @@ ev_scene_createchildobject(
   GameSceneStruct scene = GameData.scenes[scene_handle?scene_handle:GameData.activeScene];
   GameObject object = GameECS->createChildEntity(scene.ecs_world, parent);
 
-  ev_object_settransform(scene_handle, object, 
+  ev_object_settransform(scene_handle, object,
     Vec3new(0, 0, 0),     // Position
     Vec4new(0, 0, 0, 1),  // Rotation
     Vec3new(1, 1, 1)      // Scale
@@ -1084,6 +1100,17 @@ RendererPushObjectFrameData(
 }
 
 void
+RendererPushLightFrameData(
+    ECSQuery query)
+{
+  WorldTransformComponent *worldTransforms = ECS->getQueryColumn(query, sizeof(WorldTransformComponent), 1);
+  LightComponent *lightComponents = ECS->getQueryColumn(query, sizeof(LightComponent), 2);
+  U32 count = ECS->getQueryMatchCount(query);
+
+  Light->addFrameLightData(lightComponents, worldTransforms, count);
+}
+
+void
 RendererObjectUpdateTransforms(
     ECSQuery query)
 {
@@ -1096,7 +1123,7 @@ RendererObjectUpdateTransforms(
 }
 
 
-EV_CONSTRUCTOR 
+EV_CONSTRUCTOR
 {
   static_assert(sizeof(GameObject) == sizeof(ECSEntityID), "ObjectID not the same size as ECSEntityID");
 
@@ -1116,8 +1143,12 @@ EV_CONSTRUCTOR
 
       // Rendering ECS
       RenderingData.RenderingComponentID = GameECS->registerComponent("RenderComponent", sizeof(RenderComponent), EV_ALIGNOF(RenderComponent));
-      GameECS->registerSystem("[out]WorldTransformComponent,RenderComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererObjectUpdateTransforms, "RendererObjectUpdateTransforms");
+      GameECS->registerSystem("[out]WorldTransformComponent,RenderComponent || LightComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererObjectUpdateTransforms, "RendererObjectUpdateTransforms");
       GameECS->registerSystem("[in]WorldTransformComponent,RenderComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererPushObjectFrameData, "RendererPushObjectFrameData");
+
+      // Light ECS
+      RenderingData.LightComponentID = GameECS->registerComponent("LightComponent", sizeof(LightComponent), EV_ALIGNOF(LightComponent));
+      GameECS->registerSystem("[in]WorldTransformComponent,LightComponent", EV_ECS_PIPELINE_STAGE_POSTUPDATE, RendererPushLightFrameData, "RendererPushLightFrameData");
     }
   }
 
@@ -1139,7 +1170,7 @@ EV_CONSTRUCTOR
 
   GameData.renderer_module = evol_loadmodule("renderer");
   if(GameData.renderer_module) {
-    imports(GameData.renderer_module, (Renderer, Material, GraphicsPipeline));
+    imports(GameData.renderer_module, (Renderer, Material, GraphicsPipeline, Light));
   }
 
   GameData.scenes = vec_init(GameSceneStruct, NULL, gamescenestruct_destr);
@@ -1154,7 +1185,7 @@ EV_CONSTRUCTOR
   return 0;
 }
 
-EV_DESTRUCTOR 
+EV_DESTRUCTOR
 {
   vec_fini(GameData.scenes);
   Hashmap(evstring,GameScene).free(GameData.scene_map);
@@ -1316,8 +1347,8 @@ _ev_object_setposition_wrapper(
     EV_UNALIGNED Vec3 *new_pos)
 {
   _ev_object_setposition(0, *entt, Vec3new(
-        new_pos->x, 
-        new_pos->y, 
+        new_pos->x,
+        new_pos->y,
         new_pos->z));
 }
 
@@ -1419,7 +1450,7 @@ ev_object_getworldposition_wrapper(
   out->z = res.z;
 }
 
-void 
+void
 ev_gamemod_scriptapi_loader(
     EVNS_ScriptInterface *ScriptInterface,
     ScriptContextHandle ctx_h)
