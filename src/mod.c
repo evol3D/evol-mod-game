@@ -111,6 +111,21 @@ ev_game_clearscenes()
   GameData.activeScene = 0;
 }
 
+void
+ev_game_reload()
+{
+  // TODO add more stuff as needed
+  ev_game_clearscenes();
+
+  if(GameData.renderer_module) {
+    evol_unloadmodule(GameData.renderer_module);
+  }
+  GameData.renderer_module = evol_loadmodule("renderer");
+  if(GameData.renderer_module) {
+    imports(GameData.renderer_module, (Renderer, Material, GraphicsPipeline, Light));
+  }
+}
+
 GameScene
 ev_scene_create()
 {
@@ -506,6 +521,7 @@ ev_sceneloader_loadnode(
   evstring_free(CameraComponentSTR);
   evstring_free(RigidbodyComponentSTR);
   evstring_free(ScriptComponentSTR);
+  evstring_free(RenderComponentSTR);
 
   return obj;
 }
@@ -1280,6 +1296,7 @@ ev_scene_getfromname(
 EV_BINDINGS
 {
   EV_NS_BIND_FN(Game, clearScenes, ev_game_clearscenes);
+  EV_NS_BIND_FN(Game, reload, ev_game_reload);
   EV_NS_BIND_FN(Game, setActiveScene, ev_game_setactivescene);
   EV_NS_BIND_FN(Game, progress, ev_game_progress);
 
