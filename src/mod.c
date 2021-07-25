@@ -1428,6 +1428,13 @@ ev_object_getchild_wrapper(
 }
 
 void
+ev_scene_destroyobject_wrapper(
+    EV_UNALIGNED ECSEntityID *entt)
+{
+  ev_scene_destroyobject(0, *entt);
+}
+
+void
 ev_object_getforwardvec_wrapper(
     EV_UNALIGNED Vec3 *out,
     EV_UNALIGNED ECSEntityID *entt)
@@ -1491,6 +1498,8 @@ ev_gamemod_scriptapi_loader(
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getname_wrapper, "ev_object_getname", constCharType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, ev_object_getchild_wrapper, "ev_object_getchild", ullSType, 2, (ScriptType[]){ullSType, constCharType});
+
+  ScriptInterface->addFunction(ctx_h, ev_scene_destroyobject_wrapper, "ev_scene_destroyobject", voidSType, 1, (ScriptType[]){ullSType});
 
   ScriptInterface->addFunction(ctx_h, _ev_object_getposition_wrapper, "ev_object_getposition", vec3SType, 1, (ScriptType[]){ullSType});
   ScriptInterface->addFunction(ctx_h, _ev_object_setposition_wrapper, "ev_object_setposition", voidSType, 2, (ScriptType[]){ullSType, vec3SType});

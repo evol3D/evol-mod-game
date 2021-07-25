@@ -63,6 +63,10 @@ function getObject(path)
   return Entities[C('ev_scene_getobject', path)]
 end
 
+function destroyObject(entt)
+  C('ev_scene_destroyobject', entt.entityID)
+end
+
 function loadPrefab(path)
   -- Storing this as this operation will change what this points to
   old_this = this
