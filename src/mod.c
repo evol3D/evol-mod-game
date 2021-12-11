@@ -277,10 +277,10 @@ ev_sceneloader_loadrigidbodycomponent(
     evjson_t *json,
     evstring *comp_id)
 {
-  evstring SphereCollisionShapeSTR = evstring_new("Sphere");
-  evstring BoxCollisionShapeSTR = evstring_new("Box");
-  evstring CapsuleCollisionShapeSTR = evstring_new("Capsule");
-  evstring MeshCollisionShapeSTR = evstring_new("Mesh");
+  evstring SphereCollisionShapeSTR = evstring_literal("Sphere");
+  evstring BoxCollisionShapeSTR = evstring_literal("Box");
+  evstring CapsuleCollisionShapeSTR = evstring_literal("Capsule");
+  evstring MeshCollisionShapeSTR = evstring_literal("Mesh");
 
   RigidbodyInfo info;
 
@@ -363,11 +363,6 @@ ev_sceneloader_loadrigidbodycomponent(
 
   evstring_free(collisionshapetype);
   evstring_free(collisionshapetype_id);
-
-  evstring_free(MeshCollisionShapeSTR);
-  evstring_free(SphereCollisionShapeSTR);
-  evstring_free(BoxCollisionShapeSTR);
-  evstring_free(CapsuleCollisionShapeSTR);
 }
 
 void
@@ -438,12 +433,12 @@ ev_sceneloader_loadnode(
     evstring *id,
     GameObject parent)
 {
-  evstring TransformComponentSTR = evstring_new("TransformComponent");
-  evstring RigidbodyComponentSTR = evstring_new("RigidbodyComponent");
-  evstring ScriptComponentSTR = evstring_new("ScriptComponent");
-  evstring CameraComponentSTR = evstring_new("CameraComponent");
-  evstring RenderComponentSTR = evstring_new("RenderComponent");
-  evstring LightComponentSTR = evstring_new("LightComponent");
+  evstring TransformComponentSTR = evstring_literal("TransformComponent");
+  evstring RigidbodyComponentSTR = evstring_literal("RigidbodyComponent");
+  evstring ScriptComponentSTR = evstring_literal("ScriptComponent");
+  evstring CameraComponentSTR = evstring_literal("CameraComponent");
+  evstring RenderComponentSTR = evstring_literal("RenderComponent");
+  evstring LightComponentSTR = evstring_literal("LightComponent");
   ECSGameWorldHandle ecs_world = ev_scene_getecsworld(scene);
 
   GameObject obj;
@@ -491,7 +486,7 @@ ev_sceneloader_loadnode(
       ev_sceneloader_loadrendercomponent(scene, obj, json, &component_id);
     } else if(!evstring_cmp(component_type, LightComponentSTR)) {
      ev_sceneloader_loadlightcomponent(scene, obj, json, &component_id);
-   }
+    }
 
     evstring_free(component_type);
     evstring_free(component_type_id);
@@ -515,13 +510,6 @@ ev_sceneloader_loadnode(
       }
     }
   }
-
-  evstring_free(LightComponentSTR);
-  evstring_free(TransformComponentSTR);
-  evstring_free(CameraComponentSTR);
-  evstring_free(RigidbodyComponentSTR);
-  evstring_free(ScriptComponentSTR);
-  evstring_free(RenderComponentSTR);
 
   return obj;
 }
